@@ -1,0 +1,11 @@
+# Normalize line endings to LF across the repo (important for bash scripts in Docker)
+* text=auto eol=lf
+
+# Shell scripts must always be LF (they run inside Linux containers)
+*.sh text eol=lf
+
+# Languages
+*.py linguist-language=Python
+*.ts linguist-language=TypeScript
+*.tsx linguist-language=TypeScript
+*.css linguist-language=CSS
