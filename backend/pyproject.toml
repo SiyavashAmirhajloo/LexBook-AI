@@ -16,6 +16,12 @@ dependencies = [
     "sqlalchemy",
     "asyncpg",
     "alembic",
+    "pymupdf",
+    "pgvector",
+    "fastembed",
+    "langchain-text-splitters",
+
+    "python-multipart",
 ]
 
 [project.optional-dependencies]
