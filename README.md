@@ -69,3 +69,4 @@ docker compose up --build
 - See `docs/roadmap.md` for the full version roadmap.
 - The `frontend/` and `backend/` directories each contain their own developer instructions.
 - See `.env.example` for environment variable reference.
+*Built with the mandated tech stack: FastAPI, SQLAlchemy, Alembic, PostgreSQL + pgvector, Next.js + TypeScript + Tailwind, Docker, GitHub Actions.*
