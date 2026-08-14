@@ -33,6 +33,7 @@ db_data/
 
 # IDE
 .vscode/
+.claude/
 .idea/
 *.swp
 *.swo
@@ -59,3 +60,8 @@ logs/
 
 # Docker
 .dockerignore
+
+# Files
+docs/
+prompts/
+CLAUDE.md

@@ -36,6 +36,13 @@ export default function Home() {
         >
           Open Smart PDF Library →
         </Link>
+
+        <Link
+          href="/chat"
+          className="inline-block w-full bg-emerald-600 hover:bg-emerald-500 text-white font-medium py-2 px-4 rounded text-sm transition-colors"
+        >
+          Chat with Your Books →
+        </Link>
       </div>
     </main>
   );

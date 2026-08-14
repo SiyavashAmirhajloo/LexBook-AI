@@ -55,7 +55,39 @@ docker compose up --build
 4. Click **Search Book**, type a query (e.g., "present perfect"), and view the top matching chunks with similarity scores.
 
 ### What's Still Missing (future versions)
-- **Chat** – conversational Q&A over the knowledge base (Version 2).
+- **Hybrid search** – BM25 + vector reranking (Version 4).
+- **Web Intelligence** – search the internet for learning resources (Version 5).
+- **Personalization** – flashcards, spaced repetition, weak-topic detection (Version 6).
+- **Long-Term Memory** – persist everything across sessions (Version 7).
+- **Authentication** – OAuth login + guest mode (Version 9).
+- **Production hardening** – logging, monitoring, production Nginx setup.
+
+---
+
+## Version 2 – Semantic Chat
+
+**Goal:** Let users talk with their books and get cited answers.
+
+- **LLM abstraction layer** – `app/services/llm.py` with a `GeminiProvider` (Gemini 1.5 Flash via REST SSE). Swappable via `LLM_PROVIDER` env. Falls back gracefully if `GEMINI_API_KEY` is missing.
+- **Streaming chat** – `POST /api/v1/chat` streams token-by-token via SSE (`data: {"type":"token","content":"..."}`). Final event delivers citations (`{"type":"citations","citations":[...]}`).
+- **Citations** – every answer cites numbered sources from the vector search, showing document title + page number + similarity score. Click a citation to expand the full excerpt.
+- **Conversation history** – messages are persisted to the DB (`conversations` + `messages` tables). Resume any past session from the history list.
+- **Chat UI** – `/chat` page with streaming tokens rendered in real time, citation chips under each assistant message, and a click-to-expand excerpt view.
+
+### API Endpoints (new in V2)
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/chat` | Streaming chat (SSE tokens + final citations) |
+| `GET` | `/api/v1/conversations` | List all chat conversations |
+| `GET` | `/api/v1/conversations/{id}/messages` | Get full message history for a conversation |
+
+### Usage Demo
+1. Upload a PDF via `/library` (or via `POST /api/v1/documents/upload`).
+2. Open `/chat` and type a question (e.g. "Explain present perfect with examples").
+3. Watch the answer stream in token-by-token; numbered source chips appear below.
+4. Click a citation chip to see the full excerpt from the original book.
+
+### What's Still Missing (future versions)
 - **Hybrid search** – BM25 + vector reranking (Version 4).
 - **Web Intelligence** – search the internet for learning resources (Version 5).
 - **Personalization** – flashcards, spaced repetition, weak-topic detection (Version 6).
