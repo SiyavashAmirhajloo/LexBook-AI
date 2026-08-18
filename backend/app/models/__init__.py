@@ -2,5 +2,6 @@
 
 from app.models.documents import Base, Document, DocumentChunk
 from app.models.conversations import Conversation, Message
+from app.models.study_sessions import StudySession
 
-__all__ = ["Base", "Document", "DocumentChunk", "Conversation", "Message"]
+__all__ = ["Base", "Document", "DocumentChunk", "Conversation", "Message", "StudySession"]

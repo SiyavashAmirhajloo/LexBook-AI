@@ -20,7 +20,7 @@ dependencies = [
     "pgvector",
     "fastembed",
     "langchain-text-splitters",
-
+    "httpx",
     "python-multipart",
 ]
 
