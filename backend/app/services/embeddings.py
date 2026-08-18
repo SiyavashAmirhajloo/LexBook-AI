@@ -16,18 +16,17 @@ import math
 import os
 from abc import ABC, abstractmethod
 from functools import lru_cache
-from typing import List
 
 
 class EmbeddingProvider(ABC):
     """Abstract base for embedding providers."""
 
     @abstractmethod
-    def embed(self, text: str) -> List[float]:
+    def embed(self, text: str) -> list[float]:
         """Embed a single text into a vector."""
 
     @abstractmethod
-    def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
         """Embed multiple texts."""
 
     @property
@@ -45,13 +44,13 @@ class HashEmbeddingProvider(EmbeddingProvider):
 
     DIMENSION = 1024
 
-    def _embed_raw(self, text: str) -> List[float]:
+    def _embed_raw(self, text: str) -> list[float]:
         # Stable hash → 1024 floats in [-1, 1] via SHA-512 expansion.
         # Multiple rounds cover the 1024-dim vector since SHA-512 is 64 bytes.
         chunks_needed = self.DIMENSION // 64 + 1
         digest = b""
         for i in range(chunks_needed):
-            digest += hashlib.sha512(f"{i}:".encode("utf-8") + text.encode("utf-8")).digest()
+            digest += hashlib.sha512(f"{i}:".encode() + text.encode("utf-8")).digest()
         vec = []
         for i in range(self.DIMENSION):
             byte = digest[i]
@@ -61,10 +60,10 @@ class HashEmbeddingProvider(EmbeddingProvider):
         norm = math.sqrt(sum(v * v for v in vec)) or 1.0
         return [v / norm for v in vec]
 
-    def embed(self, text: str) -> List[float]:
+    def embed(self, text: str) -> list[float]:
         return self._embed_raw(text)
 
-    def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
         return [self._embed_raw(t) for t in texts]
 
     @property
@@ -85,10 +84,10 @@ class FastEmbedProvider(EmbeddingProvider):
         from fastembed import TextEmbedding
         self._model = TextEmbedding(model_name=self.MODEL_NAME)
 
-    def embed(self, text: str) -> List[float]:
+    def embed(self, text: str) -> list[float]:
         return list(next(self._model.embed([text])))
 
-    def embed_batch(self, texts: List[str]) -> List[List[float]]:
+    def embed_batch(self, texts: list[str]) -> list[list[float]]:
         return [list(e) for e in self._model.embed(texts)]
 
     @property

@@ -97,6 +97,40 @@ docker compose up --build
 
 ---
 
+## Version 3 – Study Sessions
+
+**Goal:** Give the system awareness of what the user is actually studying, not just what they ask about.
+
+- **Study session model** – `study_sessions` table records the raw input, the resolved book, the page range, extracted topics/keywords, a summary, and start/finish timestamps.
+- **Natural-language section matching** – say "I finished Unit 7" or "I studied Relative Clauses" and the system embeds that phrase and runs the same pgvector cosine search from V1/V2 to locate the matching chunks. No second retrieval system.
+- **Topic extraction** – the matched chunk text is sent to Gemini with a pedagogical prompt that returns structured JSON: `topics` (e.g. "Passive Voice", "CARS Model"), `keywords` (key terms to remember), and a plain-English `summary`.
+- **Offline fallback** – if `GEMINI_API_KEY` is absent or the call fails, a frequency-based heuristic still produces keywords so the pipeline never breaks.
+- **Session history** – every session persists so Versions 6–10 (personalization, memory, study planner) can build on it.
+- **Study Sessions UI** – `/study-sessions` page: start a session, optionally pin it to a specific book, see extraction results immediately, and browse past sessions with their topic/keyword chips.
+
+### API Endpoints (new in V3)
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/study-sessions/start` | Resolve what was studied + extract topics/keywords |
+| `POST` | `/api/v1/study-sessions/{id}/finish` | Mark a session complete |
+| `GET` | `/api/v1/study-sessions` | List session history with extracted topics |
+
+### Usage Demo
+1. Upload a book via `/library`.
+2. Open `/study-sessions` and type what you studied, e.g. "I finished the section on Relative Clauses".
+3. The system finds the matching pages, then shows extracted topics, keywords, and a summary.
+4. Click **Mark Finished** to close the session; it stays in the history list.
+
+### What's Still Missing (future versions)
+- **Agent orchestration** – LangGraph multi-agent workflow (Version 4).
+- **Web Intelligence** – search the internet for learning resources (Version 5).
+- **Personalization** – flashcards, spaced repetition, weak-topic detection (Version 6).
+- **Long-Term Memory** – persist everything across sessions (Version 7).
+- **Authentication** – OAuth login + guest mode (Version 9).
+- **AI Study Planner** – proactive daily study planning (Version 10).
+
+---
+
 ## Remaining Docs
 - See `docs/roadmap.md` for the full version roadmap.
 - The `frontend/` and `backend/` directories each contain their own developer instructions.

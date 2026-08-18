@@ -1,7 +1,7 @@
 """Initial baseline migration with pgvector extension."""
 
+
 from alembic import op
-import sqlalchemy as sa
 
 revision = "0001_initial_baseline"
 down_revision = None

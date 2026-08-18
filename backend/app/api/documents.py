@@ -4,10 +4,9 @@ import shutil
 from pathlib import Path
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
-from sqlalchemy import select, delete, text as sa_text
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from pgvector.sqlalchemy import Vector
 
 from app.core.db import get_db
 from app.models import Document, DocumentChunk
@@ -34,7 +33,6 @@ async def upload_document(
 
     # Save to disk with UUID name to avoid collisions
     import uuid as uuid_module
-    file_stem = Path(file.filename).stem
     save_name = f"{uuid_module.uuid4().hex}.pdf"
     file_path = str(Path(UPLOAD_DIR) / save_name)
 
@@ -48,7 +46,7 @@ async def upload_document(
     except Exception as e:
         # Clean up file on failure
         Path(file_path).unlink(missing_ok=True)
-        raise HTTPException(status_code=500, detail=f"Failed to process PDF: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to process PDF: {e}") from e
 
     return DocumentResponse(
         id=doc.id,

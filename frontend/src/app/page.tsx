@@ -43,6 +43,13 @@ export default function Home() {
         >
           Chat with Your Books →
         </Link>
+
+        <Link
+          href="/study-sessions"
+          className="inline-block w-full bg-purple-600 hover:bg-purple-500 text-white font-medium py-2 px-4 rounded text-sm transition-colors"
+        >
+          📚 Track a Study Session →
+        </Link>
       </div>
     </main>
   );

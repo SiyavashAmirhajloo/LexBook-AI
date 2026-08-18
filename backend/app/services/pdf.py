@@ -1,12 +1,12 @@
 """PDF processing: extraction, chunking, metadata."""
 import os
 from pathlib import Path
-from typing import List, Dict, Tuple
+
 import fitz  # PyMuPDF
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 
 
-def extract_text_from_pdf(pdf_path: str) -> Tuple[List[Dict], int]:
+def extract_text_from_pdf(pdf_path: str) -> tuple[list[dict], int]:
     """
     Extract text from PDF, returning list of chunk dicts with page_number + text.
 
@@ -17,7 +17,7 @@ def extract_text_from_pdf(pdf_path: str) -> Tuple[List[Dict], int]:
     - Returns [{"page": int, "text": str}, ...] + total page count
     """
     doc = fitz.open(pdf_path)
-    all_chunks: List[Dict] = []
+    all_chunks: list[dict] = []
 
     splitter = RecursiveCharacterTextSplitter(
         chunk_size=800,
@@ -33,7 +33,7 @@ def extract_text_from_pdf(pdf_path: str) -> Tuple[List[Dict], int]:
             continue
 
         chunks = splitter.split_text(text)
-        for idx, chunk in enumerate(chunks):
+        for chunk in chunks:
             all_chunks.append({
                 "page": page_num + 1,
                 "text": chunk.strip(),

@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
+import Link from 'next/link';
 
 interface Citation {
   index: number;
@@ -98,16 +99,17 @@ export default function ChatPage() {
                 )
               );
             }
-          } catch (e) {
+          } catch {
             // ignore malformed lines
           }
         }
       }
-    } catch (e: any) {
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : "Unknown error";
       setMessages((prev) =>
         prev.map((m) =>
           m.id === aiMsg.id
-            ? { ...m, content: m.content || `Error: ${e.message}`, streaming: false }
+            ? { ...m, content: m.content || `Error: ${msg}`, streaming: false }
             : m
         )
       );
@@ -121,9 +123,9 @@ export default function ChatPage() {
       {/* Header */}
       <header className="flex justify-between items-center px-6 py-4 border-b border-gray-800 bg-gray-900/95 backdrop-blur">
         <h1 className="text-xl font-bold text-white">📚 LexBook AI Chat</h1>
-        <a href="/" className="text-sm text-gray-400 hover:text-white">
+        <Link href="/" className="text-sm text-gray-400 hover:text-white">
           ← Back to Home
-        </a>
+        </Link>
       </header>
 
       {/* Messages */}
@@ -131,7 +133,7 @@ export default function ChatPage() {
         {messages.length === 0 && (
           <div className="text-center text-gray-500 mt-20">
             <p className="text-lg mb-2">Ask anything about your study books.</p>
-            <p className="text-sm">e.g. "Explain relative clauses with examples"</p>
+            <p className="text-sm">e.g. &quot;Explain relative clauses with examples&quot;</p>
           </div>
         )}
         {messages.map((msg) => (

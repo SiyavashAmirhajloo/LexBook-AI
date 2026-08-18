@@ -1,7 +1,8 @@
 """Create conversations and messages tables."""
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "0003_add_conversations"
 down_revision = "0002_add_documents"
