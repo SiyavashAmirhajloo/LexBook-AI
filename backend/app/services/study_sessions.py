@@ -63,7 +63,13 @@ async def resolve_studied_section(
 
     rows = (await db.execute(stmt)).all()
     if not rows:
-        return {"document_id": None, "document_title": None, "page_start": None, "page_end": None, "texts": []}
+        return {
+            "document_id": None,
+            "document_title": None,
+            "page_start": None,
+            "page_end": None,
+            "texts": [],
+        }
 
     pages = [r.page_number for r in rows]
     return {

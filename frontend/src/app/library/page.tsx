@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 
 interface Document {
   id: string;
@@ -63,7 +64,7 @@ export default function LibraryPage() {
       } else {
         alert('Upload failed');
       }
-    } catch (e) {
+    } catch {
       alert('Upload error');
     } finally {
       setUploading(false);
@@ -78,7 +79,7 @@ export default function LibraryPage() {
         setDocuments(documents.filter((doc) => doc.id !== id));
         if (searchDocId === id) setSearchDocId(null);
       }
-    } catch (e) {
+    } catch {
       alert('Delete error');
     }
   };
@@ -108,7 +109,7 @@ export default function LibraryPage() {
       <div className="max-w-4xl mx-auto space-y-8">
         <div className="flex justify-between items-center border-b border-gray-800 pb-4">
           <h1 className="text-2xl font-bold text-white">Smart PDF Library</h1>
-          <a href="/" className="text-sm text-gray-400 hover:text-white">← Back to Home</a>
+          <Link href="/" className="text-sm text-gray-400 hover:text-white">← Back to Home</Link>
         </div>
 
         {/* Upload card */}
@@ -191,7 +192,7 @@ export default function LibraryPage() {
             {searchResults.length > 0 && (
               <div className="space-y-4">
                 <h3 className="text-sm font-medium text-gray-400">Top Semantic Matches</h3>
-                {searchResults.map((res, i) => (
+                {searchResults.map((res) => (
                   <div key={res.chunk_id} className="bg-gray-900 p-4 rounded border border-gray-700/60 text-sm">
                     <div className="flex justify-between text-xs text-gray-400 mb-2">
                       <span>Page {res.page_number}</span>

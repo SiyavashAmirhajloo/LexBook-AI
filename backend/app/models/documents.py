@@ -1,10 +1,11 @@
 """Document and chunk models."""
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import UUID, uuid4
-from sqlalchemy import String, DateTime, ForeignKey, Integer, Text
+
+from pgvector.sqlalchemy import Vector
+from sqlalchemy import DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
-from pgvector.sqlalchemy import Vector
 
 
 class Base(DeclarativeBase):
@@ -21,7 +22,7 @@ class Document(Base):
     file_location: Mapped[str] = mapped_column(String(1024), nullable=False)
     page_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     upload_date: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
 
     chunks: Mapped[list["DocumentChunk"]] = relationship(
@@ -36,7 +37,10 @@ class DocumentChunk(Base):
 
     id: Mapped[UUID] = mapped_column(PG_UUID(as_uuid=True), primary_key=True, default=uuid4)
     document_id: Mapped[UUID] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("documents.id", ondelete="CASCADE"), nullable=False, index=True
+        PG_UUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="CASCADE"),
+        nullable=False,
+        index=True,
     )
     page_number: Mapped[int] = mapped_column(Integer, nullable=False)
     chunk_index: Mapped[int] = mapped_column(Integer, nullable=False)

@@ -1,7 +1,8 @@
 """Create study_sessions table."""
 
-from alembic import op
 import sqlalchemy as sa
+
+from alembic import op
 
 revision = "0004_add_study_sessions"
 down_revision = "0003_add_conversations"

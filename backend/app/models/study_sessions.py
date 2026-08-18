@@ -4,11 +4,11 @@ A session records what the user actually studied: which book, which
 chapter/unit, when, and what topics/keywords the system extracted from
 the studied content.
 """
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID, uuid4
 
-from sqlalchemy import String, DateTime, Text, JSON, ForeignKey, Integer
+from sqlalchemy import JSON, DateTime, ForeignKey, Integer, String, Text
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
@@ -27,7 +27,10 @@ class StudySession(Base):
 
     # Resolved book (nullable: the reference may not match anything)
     document_id: Mapped[UUID | None] = mapped_column(
-        PG_UUID(as_uuid=True), ForeignKey("documents.id", ondelete="SET NULL"), nullable=True, index=True
+        PG_UUID(as_uuid=True),
+        ForeignKey("documents.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
     )
     # Free-text section label the user referred to, e.g. "Unit 7", "Relative Clauses"
     section_label: Mapped[str | None] = mapped_column(String(256), nullable=True)
@@ -42,7 +45,7 @@ class StudySession(Base):
     summary: Mapped[str | None] = mapped_column(Text, nullable=True)
 
     started_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), default=lambda: datetime.now(timezone.utc), nullable=False
+        DateTime(timezone=True), default=lambda: datetime.now(UTC), nullable=False
     )
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 

@@ -1,8 +1,9 @@
 """Create documents and document_chunks tables with pgvector."""
 
-from alembic import op
 import sqlalchemy as sa
 from pgvector.sqlalchemy import Vector
+
+from alembic import op
 
 revision = "0002_add_documents"
 down_revision = "0001_initial_baseline"

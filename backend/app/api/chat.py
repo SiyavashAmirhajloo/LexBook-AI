@@ -1,6 +1,6 @@
 """Chat API: streaming chat with conversation history."""
 import json
-from datetime import datetime, timezone
+from datetime import datetime
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -11,8 +11,8 @@ from starlette.responses import StreamingResponse
 
 from app.core.db import get_db
 from app.models import Conversation, Message
+from app.services.chat import SYSTEM_PROMPT, build_user_prompt, retrieve_context
 from app.services.llm import LLMMessage, get_llm_provider
-from app.services.chat import SYSTEM_PROMPT, retrieve_context, build_user_prompt
 
 router = APIRouter()
 
@@ -106,7 +106,8 @@ async def chat_stream(
             await db.commit()
 
             yield f"data: {json.dumps({'type': 'citations', 'citations': citations})}\n\n"
-            yield f"data: {json.dumps({'type': 'done', 'conversation_id': str(conversation_id)})}\n\n"
+            done_payload = json.dumps({"type": "done", "conversation_id": str(conversation_id)})
+            yield f"data: {done_payload}\n\n"
 
         except Exception as e:
             yield f"data: {json.dumps({'type': 'error', 'content': str(e)})}\n\n"
@@ -129,7 +130,10 @@ async def list_conversations(db: AsyncSession = Depends(get_db)):
     """List all conversations, most recent first."""
     result = await db.execute(select(Conversation).order_by(Conversation.created_at.desc()))
     conversations = result.scalars().all()
-    return [ConversationSummary(id=c.id, title=c.title, created_at=c.created_at) for c in conversations]
+    return [
+        ConversationSummary(id=c.id, title=c.title, created_at=c.created_at)
+        for c in conversations
+    ]
 
 
 @router.get("/conversations/{conversation_id}/messages", response_model=list[MessageResponse])

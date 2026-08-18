@@ -4,14 +4,14 @@ Provider-agnostic interface as required by docs/tech-stack.md.
 Default: Gemini via the Google Generative AI REST API (no SDK needed).
 Falls back to a deterministic local echo if GEMINI_API_KEY is missing.
 """
-import os
 import json
+import os
 from abc import ABC, abstractmethod
-from typing import AsyncIterator
+from collections.abc import AsyncIterator
 from dataclasses import dataclass
+from functools import lru_cache
 
 import httpx
-from functools import lru_cache
 
 
 @dataclass

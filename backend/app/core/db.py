@@ -1,6 +1,5 @@
 """Database utilities for async SQLAlchemy sessions."""
-import os
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
+from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 
 from .config import get_settings

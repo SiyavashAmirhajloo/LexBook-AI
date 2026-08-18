@@ -41,6 +41,13 @@ target-version = "py313"
 
 [tool.ruff.lint]
 select = ["E", "F", "W", "I", "UP", "B", "ASYNC"]
+# FastaAPI uses Depends()/File() in parameter defaults by design; async
+# file ops are acceptable in this local-only backend for V1–V3.
+ignore = [
+    "B008",   # function call in default arguments (FastAPI Depends/File)
+    "ASYNC240", "ASYNC230",  # async file/pathlib (acceptable for local uploads)
+    "ASYNC110",
+]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

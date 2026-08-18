@@ -1,13 +1,11 @@
 """Process uploaded documents: extract, chunk, embed, store."""
-import os
-from datetime import datetime, timezone
-from pathlib import Path
+from datetime import UTC, datetime
 
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.models import Document, DocumentChunk
-from app.services.pdf import extract_text_from_pdf, extract_metadata
 from app.services.embeddings import get_embedding_provider
+from app.services.pdf import extract_metadata, extract_text_from_pdf
 
 
 async def process_uploaded_pdf(
@@ -22,7 +20,7 @@ async def process_uploaded_pdf(
         title=metadata["title"],
         file_location=file_path,
         page_count=metadata["page_count"],
-        upload_date=datetime.now(timezone.utc),
+        upload_date=datetime.now(UTC),
     )
     db.add(doc_record)
     await db.flush()  # assign ID without committing transaction
@@ -35,7 +33,7 @@ async def process_uploaded_pdf(
     else:
         embeddings = []
 
-    for idx, (chunk_data, embedding) in enumerate(zip(chunks_data, embeddings)):
+    for idx, (chunk_data, embedding) in enumerate(zip(chunks_data, embeddings, strict=False)):
         if not chunk_data["text"].strip():
             continue
 

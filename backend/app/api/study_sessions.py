@@ -1,4 +1,5 @@
 """Study session API (V3)."""
+from datetime import UTC
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -14,8 +15,8 @@ from app.schemas.study_sessions import (
     StudySessionStartResponse,
 )
 from app.services.study_sessions import (
-    resolve_studied_section,
     extract_topics,
+    resolve_studied_section,
 )
 
 router = APIRouter()
@@ -62,7 +63,9 @@ async def start_study_session(
     else:
         doc = None
         if payload.document_id:
-            doc_result = await db.execute(select(Document).where(Document.id == payload.document_id))
+            doc_result = await db.execute(
+                select(Document).where(Document.id == payload.document_id)
+            )
             doc = doc_result.scalar_one_or_none()
 
     session = StudySession(
@@ -102,8 +105,8 @@ async def finish_study_session(session_id: UUID, db: AsyncSession = Depends(get_
     if not session:
         raise HTTPException(status_code=404, detail="Study session not found")
 
-    from datetime import datetime, timezone
-    session.finished_at = datetime.now(timezone.utc)
+    from datetime import datetime
+    session.finished_at = datetime.now(UTC)
     await db.commit()
     await db.refresh(session)
 
@@ -124,7 +127,9 @@ async def list_study_sessions(db: AsyncSession = Depends(get_db)):
     for s in sessions:
         title = None
         if s.document_id:
-            doc_result = await db.execute(select(Document.title).where(Document.id == s.document_id))
+            doc_result = await db.execute(
+                select(Document.title).where(Document.id == s.document_id)
+            )
             title = doc_result.scalar_one_or_none()
 
         list_response.append(StudySessionListResponse(

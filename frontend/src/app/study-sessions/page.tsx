@@ -112,7 +112,7 @@ export default function StudySessionsPage() {
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
           <h2 className="text-lg font-semibold text-white mb-4">📚 Start a New Study Session</h2>
           <p className="text-sm text-gray-400 mb-4">
-            Tell the app what you studied, e.g. "I finished Unit 7" or "I studied Relative Clauses"
+            Tell the app what you studied, e.g. &quot;I finished Unit 7&quot; or &quot;I studied Relative Clauses&quot;
           </p>
           <form onSubmit={handleStartSession} className="space-y-4">
             <input
@@ -149,7 +149,7 @@ export default function StudySessionsPage() {
         {lastStarted && (
           <div className="bg-gray-800 rounded-lg p-6 border border-emerald-900/50 animate-fade-in">
             <h2 className="text-lg font-semibold text-emerald-300 mb-4">✅ Session Started</h2>
-            <p className="text-sm text-gray-400 mb-3">You studied: "{lastStarted.raw_input}"</p>
+            <p className="text-sm text-gray-400 mb-3">You studied: &quot;{lastStarted.raw_input}&quot;</p>
             {!!lastStarted.document_title && (
               <p className="text-sm text-gray-500 mb-4">Book: {lastStarted.document_title}</p>
             )}
@@ -193,7 +193,7 @@ export default function StudySessionsPage() {
               {sessions.map((s) => (
                 <div key={s.id} className="bg-gray-800 border border-gray-700 rounded-lg p-5">
                   <div className="flex justify-between items-start mb-2">
-                    <p className="text-sm text-gray-100">"{s.raw_input}"</p>
+                    <p className="text-sm text-gray-100">&quot;{s.raw_input}&quot;</p>
                     {s.finished_at ? (
                       <span className="text-xs bg-gray-700 text-green-300 px-2 py-0.5 rounded">✓ Finished</span>
                     ) : (
