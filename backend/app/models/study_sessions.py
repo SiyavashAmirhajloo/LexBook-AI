@@ -50,3 +50,8 @@ class StudySession(Base):
     finished_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
     document = relationship("Document")
+    resources: Mapped[list["StudyResource"]] = relationship(  # noqa: F821
+        "StudyResource",
+        back_populates="study_session",
+        cascade="all, delete-orphan",
+    )

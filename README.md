@@ -185,6 +185,34 @@ docker compose up --build
 
 ---
 
+## Version 5 – Internet Intelligence
+
+**Goal:** Find real IELTS/TOEFL learning resources on the web, tied to the topics extracted in V3 study sessions.
+
+- **Search abstraction layer** – `app/services/search.py` with a `SearchProvider` interface. Ships with `DuckDuckGoProvider` (no API key); swap via `SEARCH_PROVIDER` env. Tavily/Brave/SerpAPI plug in as one subclass each.
+- **Internet Agent** – new LangGraph node (`coordinator → planner → internet → memory → evaluation`). Takes a session's extracted topics, searches per-topic queries biased toward IELTS/TOEFL practice material, and persists curated results.
+- **Reputable-source ranking** – results are tiered per `docs/architecture.md`: official (ETS, British Council, IDP) → educational (Magoosh, IELTS Liz, E2Language…) → secondary (YouTube, Reddit) → other. Reputable hits sort first and get an `is_reputable` flag.
+- **Copyright handling (non-negotiable rule)** – provider snippets are used only as transient LLM input and are NEVER stored or returned. The DB keeps: link, title, domain, an ORIGINAL AI-written summary, resource type, and AI-GENERATED original practice questions inspired by the topic.
+- **Graceful degradation** – if no LLM is available (or Gemini is unreachable), curation falls back to links-only mode — always copyright-safe, never empty-handed.
+- **Resources UI** – each session card in `/study-sessions` gets a "🌐 Find Web Resources" button; results render with source badges, skill-type chips, original summaries, and generated practice questions.
+
+### API Endpoints (new in V5)
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/study-sessions/{id}/resources` | Search + curate web resources for the session's topics (503 if the search provider is rate-limited) |
+| `GET` | `/api/v1/study-sessions/{id}/resources` | List previously curated resources |
+
+### Copyright edge cases & notes
+- Snippets are summarisation *input* only; the persisted `summary` field is written fresh by the LLM from the topic, not the snippet.
+- Practice questions are generated from the topic itself; the prompt explicitly forbids reproducing source questions. Full personalized question generation lands in V6.
+- DuckDuckGo's HTML endpoint rate-limits aggressive automated use (HTTP 202 + bot check). The provider retries once then fails loudly — callers return HTTP 503 instead of pretending nothing was found.
+
+---
+
+## Remaining Docs
+
+---
+
 ## Remaining Docs
 - See `docs/roadmap.md` for the full version roadmap.
 - The `frontend/` and `backend/` directories each contain their own developer instructions.

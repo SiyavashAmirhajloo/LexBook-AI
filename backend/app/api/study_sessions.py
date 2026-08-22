@@ -3,18 +3,21 @@ from datetime import UTC
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.agents.graph import run_graph
 from app.core.db import get_db
-from app.models import Document, StudySession
+from app.models import Document, StudyResource, StudySession
 from app.schemas.study_sessions import (
+    StudyResourceResponse,
+    StudyResourcesResponse,
     StudySessionCreate,
     StudySessionFinishResponse,
     StudySessionListResponse,
     StudySessionStartResponse,
 )
+from app.services.resources import curate_resources_for_topics
 from app.services.study_sessions import (
     extract_topics,
     resolve_studied_section,
@@ -166,3 +169,96 @@ async def list_study_sessions(db: AsyncSession = Depends(get_db)):
         ))
 
     return list_response
+
+
+# ── V5: Internet Intelligence ──────────────────────────────────────
+
+def _to_resource_response(r: StudyResource) -> StudyResourceResponse:
+    return StudyResourceResponse(
+        id=r.id,
+        topic=r.topic,
+        url=r.url,
+        title=r.title,
+        source_domain=r.source_domain,
+        summary=r.summary,
+        resource_type=r.resource_type,
+        is_reputable=r.is_reputable,
+        practice_questions=r.practice_questions or [],
+    )
+
+
+@router.post("/study-sessions/{session_id}/resources", response_model=StudyResourcesResponse)
+async def find_session_resources(session_id: UUID, db: AsyncSession = Depends(get_db)):
+    """Search the web for IELTS/TOEFL resources matching this session's topics.
+
+    Runs through the Internet Agent in the LangGraph workflow. Only links and
+    original AI-written summaries are persisted — never scraped question text.
+    """
+    result = await db.execute(select(StudySession).where(StudySession.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Study session not found")
+
+    topics = session.topics or []
+    if not topics:
+        raise HTTPException(
+            status_code=400,
+            detail="This session has no extracted topics to search for.",
+        )
+
+    try:
+        curated = await curate_resources_for_topics(topics)
+    except RuntimeError as exc:
+        raise HTTPException(status_code=503, detail=str(exc)) from exc
+
+    graph_state = await run_graph(
+        text=session.raw_input,
+        intent="internet",
+        topics=topics,
+        resources=curated,
+    )
+    print(
+        f"[graph] intent=internet traced={len(graph_state['trace'])} "
+        f"route={graph_state['route']}"
+    )
+    for line in graph_state["trace"]:
+        print(f"[graph]   {line}")
+
+    # Replace any previous curation for this session so repeat calls stay idempotent.
+    await db.execute(
+        delete(StudyResource).where(StudyResource.study_session_id == session_id)
+    )
+
+    records = [StudyResource(study_session_id=session_id, **item) for item in curated]
+    db.add_all(records)
+    await db.commit()
+    for r in records:
+        await db.refresh(r)
+
+    return StudyResourcesResponse(
+        study_session_id=session_id,
+        topics=topics,
+        resources=[_to_resource_response(r) for r in records],
+    )
+
+
+@router.get("/study-sessions/{session_id}/resources", response_model=StudyResourcesResponse)
+async def list_session_resources(session_id: UUID, db: AsyncSession = Depends(get_db)):
+    """Return previously curated resources for a study session."""
+    result = await db.execute(select(StudySession).where(StudySession.id == session_id))
+    session = result.scalar_one_or_none()
+    if not session:
+        raise HTTPException(status_code=404, detail="Study session not found")
+
+    res_result = await db.execute(
+        select(StudyResource)
+        .where(StudyResource.study_session_id == session_id)
+        .order_by(StudyResource.is_reputable.desc(), StudyResource.created_at)
+    )
+    resources = res_result.scalars().all()
+
+    return StudyResourcesResponse(
+        study_session_id=session_id,
+        topics=session.topics or [],
+        resources=[_to_resource_response(r) for r in resources],
+    )
