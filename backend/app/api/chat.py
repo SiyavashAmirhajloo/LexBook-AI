@@ -9,6 +9,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.responses import StreamingResponse
 
+from app.agents.graph import run_graph
 from app.core.db import get_db
 from app.models import Conversation, Message
 from app.services.chat import SYSTEM_PROMPT, build_user_prompt, retrieve_context
@@ -54,10 +55,21 @@ async def chat_stream(
     """
     llm = get_llm_provider()
 
-    # ── Retrieve context ────────────────────────────────────────
+    # ── Retrieve context (RAG Agent) ───────────────────────────
     context_block, citations = await retrieve_context(
         db, req.message, document_id=None, top_k=6
     )
+
+    # ── Run the agent graph (coordinator → planner → RAG → memory → eval)
+    graph_state = await run_graph(
+        text=req.message,
+        intent="chat",
+        context_block=context_block,
+        citations=citations,
+    )
+    print(f"[graph] intent=chat traced={len(graph_state['trace'])} route={graph_state['route']}")
+    for line in graph_state["trace"]:
+        print(f"[graph]   {line}")
 
     # ── Build prompts ───────────────────────────────────────────
     user_prompt = build_user_prompt(req.message, context_block)

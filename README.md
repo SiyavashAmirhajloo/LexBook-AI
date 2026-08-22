@@ -131,6 +131,60 @@ docker compose up --build
 
 ---
 
+## Version 4 – Agentic Workflow
+
+**Goal:** Replace ad-hoc chat/extraction logic with a real LangGraph orchestration layer that later versions plug into.
+
+- **LangGraph graph** – `app/agents/graph.py` compiles `coordinator → planner → {rag | study} → memory → evaluation` with a conditional edge on the planner's decision.
+- **Coordinator** – single entry point for every request; records the incoming intent and hands off to the planner.
+- **Planner** – picks the agent plan. An explicit `intent` from the API wins; otherwise it infers from the message text (keyword-based for now; an LLM planner can replace it without touching the graph).
+- **RAG Agent** – wraps the V2 retrieve-then-generate path. Retrieval still runs in the service layer so the SSE streaming contract is unchanged.
+- **Study Agent** – wraps the V3 session/topic-extraction path.
+- **Memory Agent (stub)** – round-trips a per-request fact list through graph state. Real long-term memory is V7; this is the interface/plumbing only.
+- **Evaluation Agent (stub)** – emits a groundedness estimate per request. Full RAG metrics, hallucination detection, and citation accuracy come later.
+- **Tracing** – every node appends to `state["trace"]`, and both endpoints log the full trace plus an `[eval]` summary line, so graph behavior is inspectable from `docker logs`.
+
+### Example trace (chat request)
+```
+[graph] intent=chat traced=5 route=rag
+[graph]   coordinator: intent='chat' -> planner
+[graph]   planner: intent='chat' plan=['rag'] route='rag'
+[graph]   rag_agent: passthrough (context already retrieved upstream)
+[graph]   memory_agent: new=0 recalled=0 total=0
+[graph]   evaluation_agent: grounded=True
+[eval] intent=chat route=rag grounded=True context_chunks=6
+```
+
+### Example trace (study session)
+```
+[graph] intent=study traced=5 route=study
+[graph]   coordinator: intent='study' -> planner
+[graph]   planner: intent='study' plan=['study'] route='study'
+[graph]   study_agent: study_result = True
+[graph]   memory_agent: new=0 recalled=0 total=0
+[graph]   evaluation_agent: grounded=True
+[eval] intent=study route=study grounded=True context_chunks=0
+```
+
+### Fully implemented vs. stubbed
+| Agent | Status |
+|-------|--------|
+| Coordinator | Implemented (intent capture + handoff) |
+| Planner | Minimal — keyword/intent routing, no LLM planning yet |
+| RAG Agent | Implemented (wraps V2 retrieval + generation) |
+| Study Agent | Implemented (wraps V3 extraction) |
+| Memory Agent | **Stub** — state plumbing only, real memory in V7 |
+| Evaluation Agent | **Stub** — logs groundedness, full metrics later |
+
+### What's Still Missing (future versions)
+- **Web Intelligence** – search the internet for learning resources (Version 5).
+- **Personalization** – flashcards, spaced repetition, weak-topic detection (Version 6).
+- **Long-Term Memory** – persist everything across sessions (Version 7).
+- **Authentication** – OAuth login + guest mode (Version 9).
+- **AI Study Planner** – proactive daily study planning (Version 10).
+
+---
+
 ## Remaining Docs
 - See `docs/roadmap.md` for the full version roadmap.
 - The `frontend/` and `backend/` directories each contain their own developer instructions.

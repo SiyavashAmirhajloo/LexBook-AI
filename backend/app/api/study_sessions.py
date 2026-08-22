@@ -6,6 +6,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.agents.graph import run_graph
 from app.core.db import get_db
 from app.models import Document, StudySession
 from app.schemas.study_sessions import (
@@ -54,6 +55,23 @@ async def start_study_session(
     # Extract topics from matched content
     texts = resolved["texts"]
     extraction = await extract_topics(texts)
+
+    study_result = {
+        "texts": texts,
+        "topics": extraction["topics"],
+        "keywords": extraction["keywords"],
+        "summary": extraction["summary"],
+    }
+
+    # ── Run the agent graph (coordinator → planner → study → memory → eval)
+    graph_state = await run_graph(
+        text=payload.raw_input,
+        intent="study",
+        study_result=study_result,
+    )
+    print(f"[graph] intent=study traced={len(graph_state['trace'])} route={graph_state['route']}")
+    for line in graph_state["trace"]:
+        print(f"[graph]   {line}")
 
     if not payload.document_id and resolved["document_id"]:
         doc_result = await db.execute(
