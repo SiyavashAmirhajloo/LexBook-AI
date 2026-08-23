@@ -35,7 +35,10 @@ async def planner_node(state: dict) -> dict:
     """
     text = state.get("text", "")
     intent = state.get("intent", "chat")
-    plan = ["study"] if intent == "study" else _plan_chat(text)
+    if intent in ("study", "internet"):
+        plan = [intent]
+    else:
+        plan = _plan_chat(text)
     state["plan"] = plan
     state["route"] = plan[0]
     state["trace"].append(f"planner: intent={intent!r} plan={plan} route={plan[0]!r}")
@@ -67,6 +70,33 @@ async def study_agent(state: dict) -> dict:
         state["topic_count"] = len(result.get("topics", []))
         state["keyword_count"] = len(result.get("keywords", []))
     state["evaluations"].append({"agent": "study", "grounded": True, "sources": 1})
+    return state
+
+
+async def internet_agent(state: dict) -> dict:
+    """Internet Agent: curates external IELTS/TOEFL resources for study topics.
+
+    The search + LLM summarisation runs in the service layer (see
+    services/resources.py) so this node stays a thin orchestration unit, the
+    same pattern the RAG and Study agents use.
+
+    Grounded is True only when every persisted resource carries a real URL —
+    links are the verifiable artifact here, not generated prose.
+    """
+    resources = state.get("resources") or []
+    topics = state.get("topics") or []
+    reputable = sum(1 for r in resources if r.get("is_reputable"))
+    state["trace"].append(
+        f"internet_agent: topics={len(topics)} resources={len(resources)} "
+        f"reputable={reputable}"
+    )
+    state["evaluations"].append(
+        {
+            "agent": "internet",
+            "grounded": all(r.get("url") for r in resources),
+            "sources": len(resources),
+        }
+    )
     return state
 
 

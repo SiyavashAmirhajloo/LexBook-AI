@@ -50,3 +50,29 @@ class StudySessionListResponse(BaseModel):
     summary: str | None
     started_at: datetime
     finished_at: datetime | None
+
+
+class StudyResourceResponse(BaseModel):
+    """A curated external learning resource (V5).
+
+    Contains only a link plus an ORIGINAL AI-written summary — never the
+    provider's scraped snippet. See docs/architecture.md.
+    """
+
+    id: UUID
+    topic: str
+    url: str
+    title: str
+    source_domain: str
+    summary: str | None
+    resource_type: str
+    is_reputable: bool
+    practice_questions: list[str]
+
+
+class StudyResourcesResponse(BaseModel):
+    """Result of curating web resources for a study session."""
+
+    study_session_id: UUID
+    topics: list[str]
+    resources: list[StudyResourceResponse]

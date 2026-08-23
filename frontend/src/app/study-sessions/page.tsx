@@ -23,6 +23,28 @@ interface Document {
   title: string;
 }
 
+interface StudyResource {
+  id: string;
+  topic: string;
+  url: string;
+  title: string;
+  source_domain: string;
+  summary: string | null;
+  resource_type: string;
+  is_reputable: boolean;
+  practice_questions: string[];
+}
+
+const TYPE_COLORS: Record<string, string> = {
+  reading: 'text-sky-300 border-sky-800/60',
+  listening: 'text-teal-300 border-teal-800/60',
+  writing: 'text-amber-300 border-amber-800/60',
+  speaking: 'text-rose-300 border-rose-800/60',
+  grammar: 'text-indigo-300 border-indigo-800/60',
+  vocabulary: 'text-fuchsia-300 border-fuchsia-800/60',
+  general: 'text-gray-300 border-gray-700',
+};
+
 export default function StudySessionsPage() {
   const [sessions, setSessions] = React.useState<StudySession[]>([]);
   const [documents, setDocuments] = React.useState<Document[]>([]);
@@ -31,6 +53,8 @@ export default function StudySessionsPage() {
   const [input, setInput] = React.useState('');
   const [selectedBook, setSelectedBook] = React.useState<string>('');
   const [lastStarted, setLastStarted] = React.useState<StudySession | null>(null);
+  const [resources, setResources] = React.useState<Record<string, StudyResource[]>>({});
+  const [findingFor, setFindingFor] = React.useState<string | null>(null);
 
   const fetchSessions = async () => {
     setLoading(true);
@@ -93,6 +117,36 @@ export default function StudySessionsPage() {
       }
     } catch (e) {
       console.error('Finish failed', e);
+    }
+  };
+
+  const loadResources = async (id: string) => {
+    try {
+      const res = await fetch(`/api/v1/study-sessions/${id}/resources`);
+      if (res.ok) {
+        const data = await res.json();
+        setResources((prev) => ({ ...prev, [id]: data.resources }));
+      }
+    } catch (e) {
+      console.error('Load resources failed', e);
+    }
+  };
+
+  const handleFindResources = async (id: string) => {
+    setFindingFor(id);
+    try {
+      const res = await fetch(`/api/v1/study-sessions/${id}/resources`, { method: 'POST' });
+      if (res.ok) {
+        const data = await res.json();
+        setResources((prev) => ({ ...prev, [id]: data.resources }));
+      } else {
+        const err = await res.json().catch(() => ({ detail: 'Search failed' }));
+        alert(err.detail ?? 'Search failed');
+      }
+    } catch (e) {
+      console.error('Find resources failed', e);
+    } finally {
+      setFindingFor(null);
     }
   };
 
@@ -227,6 +281,97 @@ export default function StudySessionsPage() {
                   <p className="text-xs text-gray-500 mt-2">
                     {new Date(s.started_at).toLocaleString()}
                   </p>
+
+                  {/* V5: Internet Intelligence */}
+                  <div className="mt-4 pt-3 border-t border-gray-700/70">
+                    {s.topics.length > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleFindResources(s.id)}
+                          disabled={findingFor === s.id}
+                          className="text-xs bg-emerald-700 hover:bg-emerald-600 text-white px-3 py-1 rounded font-medium disabled:opacity-50"
+                        >
+                          {findingFor === s.id ? 'Searching the web…' : '🌐 Find Web Resources'}
+                        </button>
+                        {!resources[s.id] && (
+                          <button
+                            onClick={() => loadResources(s.id)}
+                            className="text-xs text-gray-400 hover:text-white underline"
+                          >
+                            show saved
+                          </button>
+                        )}
+                      </div>
+                    ) : (
+                      <p className="text-xs text-gray-600">
+                        No topics extracted — cannot search for resources.
+                      </p>
+                    )}
+
+                    {resources[s.id]?.length === 0 && (
+                      <p className="text-xs text-gray-500 mt-2">No resources saved yet.</p>
+                    )}
+
+                    {!!resources[s.id]?.length && (
+                      <div className="mt-3 space-y-3">
+                        {resources[s.id].map((r) => (
+                          <div
+                            key={r.id}
+                            className="bg-gray-900/70 border border-gray-700/60 rounded p-3"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <a
+                                href={r.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-sm text-emerald-300 hover:text-emerald-200 underline decoration-emerald-700/60"
+                              >
+                                {r.title}
+                              </a>
+                              {r.is_reputable && (
+                                <span className="shrink-0 text-[10px] bg-emerald-900/40 text-emerald-300 border border-emerald-800/60 px-1.5 py-0.5 rounded">
+                                  reputable
+                                </span>
+                              )}
+                            </div>
+
+                            <div className="flex items-center gap-2 mt-1">
+                              <span className="text-[10px] text-gray-500">{r.source_domain}</span>
+                              <span
+                                className={`text-[10px] px-1.5 py-0.5 rounded border ${
+                                  TYPE_COLORS[r.resource_type] ?? TYPE_COLORS.general
+                                }`}
+                              >
+                                {r.resource_type}
+                              </span>
+                              <span className="text-[10px] text-gray-600">· {r.topic}</span>
+                            </div>
+
+                            {r.summary && (
+                              <p className="text-xs text-gray-400 mt-2 leading-relaxed">
+                                {r.summary}
+                              </p>
+                            )}
+
+                            {r.practice_questions.length > 0 && (
+                              <div className="mt-3 pt-2 border-t border-gray-800">
+                                <p className="text-[10px] font-semibold text-gray-500 mb-1">
+                                  ORIGINAL PRACTICE QUESTIONS (AI-generated, not copied)
+                                </p>
+                                <ul className="list-disc list-inside space-y-1">
+                                  {r.practice_questions.map((q, qi) => (
+                                    <li key={qi} className="text-xs text-gray-300">
+                                      {q}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               ))}
             </div>
