@@ -1,150 +1,94 @@
 # LexBook AI
 
-**LexBook AI** is an AI‑powered personal learning platform built to help you study English and prepare for IELTS/TOEFL exams. It imports your PDF study materials, extracts the text, builds embeddings, and then surfaces personalized practice questions and resources.
+An AI-powered personal learning platform that turns static study materials into an
+interactive, agentic learning experience. The first domain is **IELTS/TOEFL
+preparation**, but the architecture is designed so any subject can plug in.
 
-## Quick Start (Docker)
+LexBook AI goes beyond "chat with your PDF": it understands what you are currently
+studying, extracts the topics you covered, searches the web for reputable practice
+material tied to those topics, and generates original practice questions — all
+orchestrated through a LangGraph multi-agent workflow.
 
-```bash
-# Clone the repo and cd into it
-git clone <repo-url>
-cd "LexBook AI"
+## Architecture at a Glance
 
-# Build and start all services
-docker compose up --build
+```
+PDF Library ──► pgvector (chunks + embeddings) ──► Semantic Chat with citations
+                                                        │
+Study Sessions ──► Topic/Keyword Extraction ────────────┤
+        │                                               ▼
+        └──────────► Internet Intelligence ◄──── LangGraph Agent Workflow
+                     (curated web resources,      coordinator → planner →
+                      original AI summaries +      {rag | study | internet}
+                      generated questions)         → memory → evaluation
 ```
 
-- **Frontend UI**: <http://localhost:3000> — opens the Library page directly.
-- **Backend API**: <http://localhost:8000/api/v1/health> — API health check.
+**Stack:** FastAPI (async) · PostgreSQL + pgvector · LangGraph · Gemini ·
+fastembed · Next.js 15 + TypeScript + TailwindCSS · Docker Compose · GitHub Actions
+
+## Quick Start
+
+```bash
+git clone https://github.com/SiyavashAmirhajloo/LexBook-AI.git
+cd LexBook-AI
+
+cp .env.example .env          # add your GEMINI_API_KEY
+docker compose up --build -d
+```
+
+- **Frontend UI**: <http://localhost:3000>
+- **Backend API**: <http://localhost:8000/api/v1/health>
+- **Interactive API docs**: <http://localhost:8000/docs>
+
+Migrations run automatically on container start. See `.env.example` for all
+supported configuration (`EMBEDDING_PROVIDER`, `SEARCH_PROVIDER`,
+`LLM_PROVIDER`, …).
+
+## Feature Walkthrough
+
+1. **Upload books** in `/library` — text is extracted, chunked, embedded into pgvector.
+2. **Chat with your books** in `/chat` — streaming answers with clickable page-level citations.
+3. **Log a study session** in `/study-sessions` — say *"I finished Unit 7"*; the system resolves the book section and extracts topics/keywords.
+4. **Find web resources** on any session card — curated IELTS/TOEFL links ranked by source reputation, each with an original AI-written summary and generated practice questions.
 
 ---
 
-## Version 0 – Project Foundation
+## Version History
 
-- **Backend** – FastAPI (Python 3.13+) with async SQLAlchemy, Alembic migrations, health‑check endpoint.
-- **Frontend** – Next.js (React + TypeScript) with TailwindCSS, dark‑mode capable shell page that calls the backend health endpoint.
-- **Database** – PostgreSQL with the pgvector extension (via Docker Compose).
-- **Containerisation** – Docker + Docker Compose for backend, frontend, and DB.
-- **CI** – GitHub Actions lint, test and build for both services.
+### V5 — Internet Intelligence *(current)*
 
----
+Curated web resources tied to what you studied.
 
-## Version 1 – Smart PDF Library
+- **Search abstraction layer** — `SearchProvider` interface with a keyless
+  DuckDuckGo provider; Tavily/Brave/SerpAPI drop in as single subclasses via
+  `SEARCH_PROVIDER`.
+- **Internet Agent** — new route in the agent graph; converts extracted session
+  topics into targeted IELTS/TOEFL queries.
+- **Reputable-source ranking** — official (ETS, British Council, IDP) →
+  educational (Magoosh, IELTS Liz, E2Language…) → secondary (YouTube, Reddit),
+  per `docs/architecture.md`.
+- **Copyright-safe by construction** — search snippets are transient LLM input
+  only. Persisted data: link, title, domain, an *original* AI-written summary,
+  skill type, and AI-*generated* original practice questions. Verified by a
+  sentinel test that fails if any snippet text reaches persistence.
+- Graceful degradation to links-only when no LLM is reachable.
 
-**Goal:** Turn the skeleton into a working local knowledge base.
-
-- **PDF upload** – `POST /api/v1/documents/upload` stores PDFs locally and creates a DB entry.
-- **Text extraction & chunking** – PyMuPDF extracts pages; `RecursiveCharacterTextSplitter` creates ~800-char chunks with 100-char overlap.
-- **Embeddings** – 1024-dim vectors from **BAAI/bge-m3** (local via `fastembed`). Set `EMBEDDING_PROVIDER=hash` for an offline deterministic fallback.
-- **Storage** – Chunks and embeddings saved in PostgreSQL/pgvector tables.
-- **Search** – `POST /api/v1/documents/{id}/search` runs cosine similarity against a document's chunks, returning top-k matches.
-- **Library UI** – `/library` page lets you upload PDFs, view existing books, delete them, and run semantic searches.
-
-### API Endpoints
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/v1/health` | Service health check |
-| `POST` | `/api/v1/documents/upload` | Upload a PDF, extract text, chunk, embed, store |
-| `GET` | `/api/v1/documents` | List all uploaded documents |
-| `DELETE` | `/api/v1/documents/{id}` | Delete a document and its chunks |
-| `POST` | `/api/v1/documents/{id}/search?query=...&top_k=5` | Vector similarity search |
+| `POST` | `/api/v1/study-sessions/{id}/resources` | Search + curate resources for the session's topics |
+| `GET` | `/api/v1/study-sessions/{id}/resources` | List previously curated resources |
 
-### Usage Demo
-1. Open the app (`http://localhost:3000`).
-2. Click **Upload Study Book**, choose a PDF.
-3. After processing (a few seconds), the book appears in the library list.
-4. Click **Search Book**, type a query (e.g., "present perfect"), and view the top matching chunks with similarity scores.
+### V4 — Agentic Workflow
 
-### What's Still Missing (future versions)
-- **Hybrid search** – BM25 + vector reranking (Version 4).
-- **Web Intelligence** – search the internet for learning resources (Version 5).
-- **Personalization** – flashcards, spaced repetition, weak-topic detection (Version 6).
-- **Long-Term Memory** – persist everything across sessions (Version 7).
-- **Authentication** – OAuth login + guest mode (Version 9).
-- **Production hardening** – logging, monitoring, production Nginx setup.
+LangGraph multi-agent orchestration layer.
 
----
+- Graph: `coordinator → planner → {rag | study | internet} → memory → evaluation`
+- **Planner** routes each request; explicit intents win, otherwise keyword inference.
+- Every node appends structured trace lines — inspectable via `docker logs`.
+- Memory and Evaluation agents are interface-complete stubs (full functionality: V7+).
 
-## Version 2 – Semantic Chat
+<details>
+<summary>Example trace</summary>
 
-**Goal:** Let users talk with their books and get cited answers.
-
-- **LLM abstraction layer** – `app/services/llm.py` with a `GeminiProvider` (Gemini 1.5 Flash via REST SSE). Swappable via `LLM_PROVIDER` env. Falls back gracefully if `GEMINI_API_KEY` is missing.
-- **Streaming chat** – `POST /api/v1/chat` streams token-by-token via SSE (`data: {"type":"token","content":"..."}`). Final event delivers citations (`{"type":"citations","citations":[...]}`).
-- **Citations** – every answer cites numbered sources from the vector search, showing document title + page number + similarity score. Click a citation to expand the full excerpt.
-- **Conversation history** – messages are persisted to the DB (`conversations` + `messages` tables). Resume any past session from the history list.
-- **Chat UI** – `/chat` page with streaming tokens rendered in real time, citation chips under each assistant message, and a click-to-expand excerpt view.
-
-### API Endpoints (new in V2)
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/chat` | Streaming chat (SSE tokens + final citations) |
-| `GET` | `/api/v1/conversations` | List all chat conversations |
-| `GET` | `/api/v1/conversations/{id}/messages` | Get full message history for a conversation |
-
-### Usage Demo
-1. Upload a PDF via `/library` (or via `POST /api/v1/documents/upload`).
-2. Open `/chat` and type a question (e.g. "Explain present perfect with examples").
-3. Watch the answer stream in token-by-token; numbered source chips appear below.
-4. Click a citation chip to see the full excerpt from the original book.
-
-### What's Still Missing (future versions)
-- **Hybrid search** – BM25 + vector reranking (Version 4).
-- **Web Intelligence** – search the internet for learning resources (Version 5).
-- **Personalization** – flashcards, spaced repetition, weak-topic detection (Version 6).
-- **Long-Term Memory** – persist everything across sessions (Version 7).
-- **Authentication** – OAuth login + guest mode (Version 9).
-- **Production hardening** – logging, monitoring, production Nginx setup.
-
----
-
-## Version 3 – Study Sessions
-
-**Goal:** Give the system awareness of what the user is actually studying, not just what they ask about.
-
-- **Study session model** – `study_sessions` table records the raw input, the resolved book, the page range, extracted topics/keywords, a summary, and start/finish timestamps.
-- **Natural-language section matching** – say "I finished Unit 7" or "I studied Relative Clauses" and the system embeds that phrase and runs the same pgvector cosine search from V1/V2 to locate the matching chunks. No second retrieval system.
-- **Topic extraction** – the matched chunk text is sent to Gemini with a pedagogical prompt that returns structured JSON: `topics` (e.g. "Passive Voice", "CARS Model"), `keywords` (key terms to remember), and a plain-English `summary`.
-- **Offline fallback** – if `GEMINI_API_KEY` is absent or the call fails, a frequency-based heuristic still produces keywords so the pipeline never breaks.
-- **Session history** – every session persists so Versions 6–10 (personalization, memory, study planner) can build on it.
-- **Study Sessions UI** – `/study-sessions` page: start a session, optionally pin it to a specific book, see extraction results immediately, and browse past sessions with their topic/keyword chips.
-
-### API Endpoints (new in V3)
-| Method | Path | Description |
-|--------|------|-------------|
-| `POST` | `/api/v1/study-sessions/start` | Resolve what was studied + extract topics/keywords |
-| `POST` | `/api/v1/study-sessions/{id}/finish` | Mark a session complete |
-| `GET` | `/api/v1/study-sessions` | List session history with extracted topics |
-
-### Usage Demo
-1. Upload a book via `/library`.
-2. Open `/study-sessions` and type what you studied, e.g. "I finished the section on Relative Clauses".
-3. The system finds the matching pages, then shows extracted topics, keywords, and a summary.
-4. Click **Mark Finished** to close the session; it stays in the history list.
-
-### What's Still Missing (future versions)
-- **Agent orchestration** – LangGraph multi-agent workflow (Version 4).
-- **Web Intelligence** – search the internet for learning resources (Version 5).
-- **Personalization** – flashcards, spaced repetition, weak-topic detection (Version 6).
-- **Long-Term Memory** – persist everything across sessions (Version 7).
-- **Authentication** – OAuth login + guest mode (Version 9).
-- **AI Study Planner** – proactive daily study planning (Version 10).
-
----
-
-## Version 4 – Agentic Workflow
-
-**Goal:** Replace ad-hoc chat/extraction logic with a real LangGraph orchestration layer that later versions plug into.
-
-- **LangGraph graph** – `app/agents/graph.py` compiles `coordinator → planner → {rag | study} → memory → evaluation` with a conditional edge on the planner's decision.
-- **Coordinator** – single entry point for every request; records the incoming intent and hands off to the planner.
-- **Planner** – picks the agent plan. An explicit `intent` from the API wins; otherwise it infers from the message text (keyword-based for now; an LLM planner can replace it without touching the graph).
-- **RAG Agent** – wraps the V2 retrieve-then-generate path. Retrieval still runs in the service layer so the SSE streaming contract is unchanged.
-- **Study Agent** – wraps the V3 session/topic-extraction path.
-- **Memory Agent (stub)** – round-trips a per-request fact list through graph state. Real long-term memory is V7; this is the interface/plumbing only.
-- **Evaluation Agent (stub)** – emits a groundedness estimate per request. Full RAG metrics, hallucination detection, and citation accuracy come later.
-- **Tracing** – every node appends to `state["trace"]`, and both endpoints log the full trace plus an `[eval]` summary line, so graph behavior is inspectable from `docker logs`.
-
-### Example trace (chat request)
 ```
 [graph] intent=chat traced=5 route=rag
 [graph]   coordinator: intent='chat' -> planner
@@ -154,67 +98,92 @@ docker compose up --build
 [graph]   evaluation_agent: grounded=True
 [eval] intent=chat route=rag grounded=True context_chunks=6
 ```
+</details>
 
-### Example trace (study session)
-```
-[graph] intent=study traced=5 route=study
-[graph]   coordinator: intent='study' -> planner
-[graph]   planner: intent='study' plan=['study'] route='study'
-[graph]   study_agent: study_result = True
-[graph]   memory_agent: new=0 recalled=0 total=0
-[graph]   evaluation_agent: grounded=True
-[eval] intent=study route=study grounded=True context_chunks=0
-```
+### V3 — Study Sessions
 
-### Fully implemented vs. stubbed
-| Agent | Status |
-|-------|--------|
-| Coordinator | Implemented (intent capture + handoff) |
-| Planner | Minimal — keyword/intent routing, no LLM planning yet |
-| RAG Agent | Implemented (wraps V2 retrieval + generation) |
-| Study Agent | Implemented (wraps V3 extraction) |
-| Memory Agent | **Stub** — state plumbing only, real memory in V7 |
-| Evaluation Agent | **Stub** — logs groundedness, full metrics later |
+The system learns *what* you study, not just what you ask.
 
-### What's Still Missing (future versions)
-- **Web Intelligence** – search the internet for learning resources (Version 5).
-- **Personalization** – flashcards, spaced repetition, weak-topic detection (Version 6).
-- **Long-Term Memory** – persist everything across sessions (Version 7).
-- **Authentication** – OAuth login + guest mode (Version 9).
-- **AI Study Planner** – proactive daily study planning (Version 10).
+- Natural-language matching: *"I finished Unit 7 of English Grammar in Use"* →
+  resolved book + page range, using the same pgvector retrieval (no second system).
+- Gemini-driven extraction returns pedagogical `topics` ("Passive Voice",
+  "CARS Model"), `keywords`, and a plain-English summary; frequency-based
+  heuristic fallback keeps the pipeline alive without an LLM.
+- Session history persists as the foundation for personalization (V6), memory
+  (V7), and the AI Study Planner (V10).
 
----
-
-## Version 5 – Internet Intelligence
-
-**Goal:** Find real IELTS/TOEFL learning resources on the web, tied to the topics extracted in V3 study sessions.
-
-- **Search abstraction layer** – `app/services/search.py` with a `SearchProvider` interface. Ships with `DuckDuckGoProvider` (no API key); swap via `SEARCH_PROVIDER` env. Tavily/Brave/SerpAPI plug in as one subclass each.
-- **Internet Agent** – new LangGraph node (`coordinator → planner → internet → memory → evaluation`). Takes a session's extracted topics, searches per-topic queries biased toward IELTS/TOEFL practice material, and persists curated results.
-- **Reputable-source ranking** – results are tiered per `docs/architecture.md`: official (ETS, British Council, IDP) → educational (Magoosh, IELTS Liz, E2Language…) → secondary (YouTube, Reddit) → other. Reputable hits sort first and get an `is_reputable` flag.
-- **Copyright handling (non-negotiable rule)** – provider snippets are used only as transient LLM input and are NEVER stored or returned. The DB keeps: link, title, domain, an ORIGINAL AI-written summary, resource type, and AI-GENERATED original practice questions inspired by the topic.
-- **Graceful degradation** – if no LLM is available (or Gemini is unreachable), curation falls back to links-only mode — always copyright-safe, never empty-handed.
-- **Resources UI** – each session card in `/study-sessions` gets a "🌐 Find Web Resources" button; results render with source badges, skill-type chips, original summaries, and generated practice questions.
-
-### API Endpoints (new in V5)
 | Method | Path | Description |
 |--------|------|-------------|
-| `POST` | `/api/v1/study-sessions/{id}/resources` | Search + curate web resources for the session's topics (503 if the search provider is rate-limited) |
-| `GET` | `/api/v1/study-sessions/{id}/resources` | List previously curated resources |
+| `POST` | `/api/v1/study-sessions/start` | Resolve what was studied + extract topics/keywords |
+| `POST` | `/api/v1/study-sessions/{id}/finish` | Mark a session complete |
+| `GET` | `/api/v1/study-sessions` | Session history with extracted topics |
 
-### Copyright edge cases & notes
-- Snippets are summarisation *input* only; the persisted `summary` field is written fresh by the LLM from the topic, not the snippet.
-- Practice questions are generated from the topic itself; the prompt explicitly forbids reproducing source questions. Full personalized question generation lands in V6.
-- DuckDuckGo's HTML endpoint rate-limits aggressive automated use (HTTP 202 + bot check). The provider retries once then fails loudly — callers return HTTP 503 instead of pretending nothing was found.
+### V2 — Semantic Chat
+
+Talk to your books; every answer is grounded and cited.
+
+- Streaming SSE responses (`token` events → final `citations` payload).
+- Numbered citations with document title, page number, similarity score, and
+  click-to-expand excerpts.
+- Provider-agnostic LLM layer (`LLM_PROVIDER`); conversation history persists
+  across sessions.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/chat` | Streaming chat (SSE tokens + final citations) |
+| `GET` | `/api/v1/conversations` | List conversations |
+| `GET` | `/api/v1/conversations/{id}/messages` | Full message history |
+
+### V1 — Smart PDF Library
+
+Local knowledge base from your own materials.
+
+- PDF upload → PyMuPDF extraction → recursive-character chunking (~800 chars,
+  100 overlap, per-page) → 1024-dim embeddings → pgvector storage.
+- Embedding abstraction layer (`EMBEDDING_PROVIDER`) with local fastembed
+  default and offline deterministic fallback.
+- Per-book vector similarity search.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/documents/upload` | Upload + process a PDF |
+| `GET` / `DELETE` | `/api/v1/documents[/{id}]` | List / delete documents |
+| `POST` | `/api/v1/documents/{id}/search?query=...&top_k=5` | Vector similarity search |
+
+### V0 — Project Foundation
+
+Async FastAPI backend with clean layering (API / services / core / models),
+Next.js shell, PostgreSQL + pgvector via Docker Compose, Alembic migrations,
+GitHub Actions CI for lint/test/build.
+
+## Roadmap
+
+| Version | Feature | Status |
+|---------|---------|--------|
+| V6 | Personalized learning — flashcards, spaced repetition, weak-topic detection, full question generation | planned |
+| V7 | Long-term memory across sessions | planned |
+| V8 | Analytics dashboard — study time, vocabulary growth, estimated band score | planned |
+| V9 | Production features — auth, logging, monitoring, deployment pipeline | planned |
+| V10 | AI Study Planner — proactive daily planning from weak topics & exam dates | planned |
+
+See [`docs/roadmap.md`](docs/roadmap.md) for the complete plan.
+
+## Development
+
+```bash
+# Backend (from backend/)
+ruff check .                      # lint
+pytest                            # tests (requires Python 3.13)
+
+# Frontend (from frontend/)
+npm run lint && npm run typecheck && npm run build
+
+# Everything, isolated:
+docker compose up --build -d
+```
 
 ---
 
-## Remaining Docs
-
----
-
-## Remaining Docs
-- See `docs/roadmap.md` for the full version roadmap.
-- The `frontend/` and `backend/` directories each contain their own developer instructions.
-- See `.env.example` for environment variable reference.
-*Built with the mandated tech stack: FastAPI, SQLAlchemy, Alembic, PostgreSQL + pgvector, Next.js + TypeScript + Tailwind, Docker, GitHub Actions.*
+*Built with the mandated tech stack: FastAPI, SQLAlchemy, Alembic,
+PostgreSQL + pgvector, LangGraph, Next.js + TypeScript + Tailwind, Docker,
+GitHub Actions.*
