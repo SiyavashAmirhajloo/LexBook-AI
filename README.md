@@ -16,10 +16,12 @@ PDF Library ──► pgvector (chunks + embeddings) ──► Semantic Chat wit
                                                         │
 Study Sessions ──► Topic/Keyword Extraction ────────────┤
         │                                               ▼
-        └──────────► Internet Intelligence ◄──── LangGraph Agent Workflow
-                     (curated web resources,      coordinator → planner →
-                      original AI summaries +      {rag | study | internet}
-                      generated questions)         → memory → evaluation
+        ├──► Flashcards / Quizzes / Prompts ◄─── LangGraph Agent Workflow
+        │    (mastery tracking, weak topics)   coordinator → planner →
+        └──────────► Internet Intelligence      {rag | study | internet |
+                 (curated web resources,         personalize} → memory →
+                  original AI summaries +        evaluation
+                  generated questions)
 ```
 
 **Stack:** FastAPI (async) · PostgreSQL + pgvector · LangGraph · Gemini ·
@@ -49,12 +51,33 @@ supported configuration (`EMBEDDING_PROVIDER`, `SEARCH_PROVIDER`,
 2. **Chat with your books** in `/chat` — streaming answers with clickable page-level citations.
 3. **Log a study session** in `/study-sessions` — say *"I finished Unit 7"*; the system resolves the book section and extracts topics/keywords.
 4. **Find web resources** on any session card — curated IELTS/TOEFL links ranked by source reputation, each with an original AI-written summary and generated practice questions.
+5. **Practice** via *Practice This Session* → flashcards, quizzes (with mastery tracking), and speaking/writing prompts. Then check `/review` for your weakest topics and what to study next.
 
 ---
 
 ## Version History
 
-### V5 — Internet Intelligence *(current)*
+### V6 — Personalized Learning *(current)*
+
+The app stops just retrieving and starts teaching.
+
+- **Flashcards** — original AI-generated term/grammar/vocab cards per study session, click-to-reveal UI.
+- **Quizzes** — 4-choice multiple choice generated from session topics; correct answers stay server-side until you commit, then every attempt updates a live mastery estimate.
+- **Prompts** — original IELTS-style speaking questions, writing tasks, and reading exercises.
+- **Weak-topic detection** — `quiz_attempts` roll up into per-topic `user_progress` (mastery = correct/attempts); `/review` ranks your weakest topics and tells you what to study next.
+- **Personalization Agent** — new route in the LangGraph graph keeps tracing parity across all features.
+- All generated content is ORIGINAL (copyright rule); heuristic fallbacks keep generation alive without an LLM.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST/GET` | `/api/v1/study-sessions/{id}/flashcards` | Generate / list flashcards for a session |
+| `POST/GET` | `/api/v1/study-sessions/{id}/prompts` | Generate / list speaking+writing+reading prompts |
+| `POST` | `/api/v1/study-sessions/{id}/quiz` | Generate a quiz (answers hidden) |
+| `POST` | `/api/v1/quiz/attempt` | Submit an answer; returns correctness + explanation + updated topic mastery |
+| `GET` | `/api/v1/weak-topics?limit=8` | Lowest-mastery topics |
+| `GET` | `/api/v1/recommendation` | One-line "study this next" |
+
+### V5 — Internet Intelligence
 
 Curated web resources tied to what you studied.
 
@@ -160,7 +183,6 @@ GitHub Actions CI for lint/test/build.
 
 | Version | Feature | Status |
 |---------|---------|--------|
-| V6 | Personalized learning — flashcards, spaced repetition, weak-topic detection, full question generation | planned |
 | V7 | Long-term memory across sessions | planned |
 | V8 | Analytics dashboard — study time, vocabulary growth, estimated band score | planned |
 | V9 | Production features — auth, logging, monitoring, deployment pipeline | planned |
