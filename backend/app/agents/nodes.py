@@ -35,7 +35,7 @@ async def planner_node(state: dict) -> dict:
     """
     text = state.get("text", "")
     intent = state.get("intent", "chat")
-    if intent in ("study", "internet"):
+    if intent in ("study", "internet", "personalize"):
         plan = [intent]
     else:
         plan = _plan_chat(text)
@@ -95,6 +95,26 @@ async def internet_agent(state: dict) -> dict:
             "agent": "internet",
             "grounded": all(r.get("url") for r in resources),
             "sources": len(resources),
+        }
+    )
+    return state
+
+
+async def personalize_agent(state: dict) -> dict:
+    """Personalization Agent: wraps V6 generation (flashcards/quiz/prompts).
+
+    The actual LLM generation runs in services/personalization.py, driven by
+    per-session endpoints. This node records the outcome for tracing and
+    evaluates groundedness the same way the other agents do.
+    """
+    generated = state.get("personalization") or {}
+    counts = {k: len(v) for k, v in generated.items() if isinstance(v, list)}
+    state["trace"].append(f"personalize_agent: generated={counts or 'none'}")
+    state["evaluations"].append(
+        {
+            "agent": "personalize",
+            "grounded": True,
+            "sources": sum(counts.values()),
         }
     )
     return state

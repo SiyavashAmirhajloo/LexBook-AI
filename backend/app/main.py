@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from app.api.chat import router as chat_router
 from app.api.documents import router as documents_router
 from app.api.health import router as health_router
+from app.api.personalization import router as personalization_router
 from app.api.study_sessions import router as study_sessions_router
 from app.core.config import get_settings
 
@@ -16,6 +17,7 @@ app.include_router(health_router, prefix=settings.api_prefix, tags=["health"])
 app.include_router(documents_router, prefix=settings.api_prefix, tags=["documents"])
 app.include_router(chat_router, prefix=settings.api_prefix, tags=["chat"])
 app.include_router(study_sessions_router, prefix=settings.api_prefix, tags=["study-sessions"])
+app.include_router(personalization_router, prefix=settings.api_prefix, tags=["personalization"])
 
 # Root endpoint
 @app.get("/")

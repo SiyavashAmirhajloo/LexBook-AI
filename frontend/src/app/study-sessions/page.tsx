@@ -293,6 +293,12 @@ export default function StudySessionsPage() {
                         >
                           {findingFor === s.id ? 'Searching the web…' : '🌐 Find Web Resources'}
                         </button>
+                        <Link
+                          href={`/study/${s.id}/practice`}
+                          className="text-xs bg-purple-700 hover:bg-purple-600 text-white px-3 py-1 rounded font-medium"
+                        >
+                          🎓 Practice This Session
+                        </Link>
                         {!resources[s.id] && (
                           <button
                             onClick={() => loadResources(s.id)}

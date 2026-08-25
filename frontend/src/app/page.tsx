@@ -50,6 +50,13 @@ export default function Home() {
         >
           📚 Track a Study Session →
         </Link>
+
+        <Link
+          href="/review"
+          className="inline-block w-full bg-orange-600 hover:bg-orange-500 text-white font-medium py-2 px-4 rounded text-sm transition-colors"
+        >
+          📊 Review Weak Topics →
+        </Link>
       </div>
     </main>
   );
