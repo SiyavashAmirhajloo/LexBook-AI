@@ -38,13 +38,16 @@ fastembed · Next.js 15 + TypeScript + TailwindCSS · Docker Compose · GitHub A
 git clone https://github.com/SiyavashAmirhajloo/LexBook-AI.git
 cd LexBook-AI
 
-cp .env.example .env          # add your GEMINI_API_KEY
+cp .env.example .env          # add your GEMINI_API_KEY (see file for all options)
 docker compose up --build -d
 ```
 
-- **Frontend UI**: <http://localhost:3000>
+- **Frontend UI**: <http://localhost:3000> (login / register / guest on first visit)
 - **Backend API**: <http://localhost:8000/api/v1/health>
 - **Interactive API docs**: <http://localhost:8000/docs>
+
+Auth quick-start: create an account on the login page, or click **Continue as
+Guest** to explore immediately. All feature routes require a session.
 
 Migrations run automatically on container start. See `.env.example` for all
 supported configuration (`EMBEDDING_PROVIDER`, `SEARCH_PROVIDER`,
@@ -64,7 +67,33 @@ supported configuration (`EMBEDDING_PROVIDER`, `SEARCH_PROVIDER`,
 
 ## Version History
 
-### V8 — Analytics Dashboard *(current)*
+### V9 — Production Features *(current)*
+
+Hardens the app from "working personal project" to production-shaped software.
+
+- **Authentication** — JWT access + refresh tokens (refresh rotation with server-side revocation), bcrypt password hashing, Google OAuth (code flow + `id_token` verification against Google's JWKS), and guest mode. All `/api/v1` business routes require a bearer token; `/health/*`, `/auth/*`, and docs stay public.
+- **Hardened containers** — multi-stage builds, non-root `app` user (uid 1001), `tini` for proper signal handling, `python -m` entrypoints, `--proxy-headers` behind reverse proxies.
+- **Centralized configuration** — one validated `Settings` class; JWT secret auto-generates in dev but must be explicit in staging/prod; CORS allowlist is env-driven.
+- **Structured logging** — JSON logs in prod (`{ts, level, logger, msg, trace_id, …}`), human-readable in dev; every error carries a `trace_id` you can grep.
+- **Monitoring** — `/health/live` (liveness), `/health/ready` (DB + config checks), legacy `/health` kept.
+- **Centralized errors** — every failure returns `{detail, code, trace_id, status}`; stack traces stay in the server log, never the response.
+- **Deploy pipeline** — `.github/workflows/deploy.yml` builds and pushes backend/frontend images to GHCR on `main`; `v*` tags trigger a smoke test (boot stack → liveness → auth-required check → guest login) and a staging deploy hook.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `POST` | `/api/v1/auth/register` | Email + password signup → token pair |
+| `POST` | `/api/v1/auth/login` | Email + password login → token pair |
+| `POST` | `/api/v1/auth/refresh` | Rotate refresh token → new pair (old one revoked) |
+| `POST` | `/api/v1/auth/logout` | Revoke the refresh token |
+| `POST` | `/api/v1/auth/guest` | Anonymous session (8h) |
+| `GET` | `/api/v1/auth/google/url` | Google consent URL |
+| `POST` | `/api/v1/auth/google/callback` | Exchange code → user + tokens |
+| `GET` | `/api/v1/auth/me` | Current user (bearer required) |
+| `GET` | `/api/v1/health/live` · `/health/ready` | Liveness / readiness probes |
+
+The frontend gained a `/login` page (sign in / register / guest), a `RequireAuth` route guard, an auth context with automatic token refresh on 401, and a logout control.
+
+### V8 — Analytics Dashboard
 
 Read-only dashboard that visualizes every metric the app already tracks (V2–V7). No parallel tracking system.
 
