@@ -2,6 +2,7 @@
 
 from app.models.conversations import Conversation, Message
 from app.models.documents import Base, Document, DocumentChunk
+from app.models.memory import LongTermFact, Vocabulary
 from app.models.personalization import (
     Flashcard,
     Prompt,
@@ -25,4 +26,6 @@ __all__ = [
     "QuizQuestion",
     "QuizAttempt",
     "UserProgress",
+    "LongTermFact",
+    "Vocabulary",
 ]

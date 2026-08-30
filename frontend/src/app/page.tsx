@@ -57,6 +57,13 @@ export default function Home() {
         >
           📊 Review Weak Topics →
         </Link>
+
+        <Link
+          href="/memory"
+          className="inline-block w-full bg-pink-600 hover:bg-pink-500 text-white font-medium py-2 px-4 rounded text-sm transition-colors"
+        >
+          🧠 View Memory →
+        </Link>
       </div>
     </main>
   );

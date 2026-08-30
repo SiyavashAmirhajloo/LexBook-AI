@@ -77,6 +77,13 @@ async def retrieve_context(
     return context_block, citations
 
 
-def build_user_prompt(question: str, context_block: str) -> str:
+def build_user_prompt(
+    question: str, context_block: str, memory_block: str | None = None
+) -> str:
     """Compose the final user-facing prompt sent to the LLM."""
-    return f"Sources:\n{context_block}\n\nQuestion: {question}"
+    memory = (
+        f"\n\nWhat the learner already knows:\n{memory_block}" if memory_block else ""
+    )
+    return (
+        f"Sources:\n{context_block}{memory}\n\nQuestion: {question}"
+    )
