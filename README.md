@@ -67,7 +67,25 @@ supported configuration (`EMBEDDING_PROVIDER`, `SEARCH_PROVIDER`,
 
 ## Version History
 
-### V9 — Production Features *(current)*
+### V10 — AI Study Planner *(current)*
+
+The flagship: everything from V1–V9 tied together into one proactive agent that decides what to study next — without being asked.
+
+- **Deterministic reasoning core** — every recommendation cites its data: which sessions were analyzed, which topics are weak (with exact mastery %), which vocabulary is overdue (with Leitner bucket + interval), and the readiness inputs. Rendered as a numbered reasoning trace in the UI.
+- **Spaced repetition** — Leitner-style intervals (1/3/7/14/30 days) over V7 vocabulary memory; `seen_count` maps to bucket, days-since-last-seen gates due-ness.
+- **Skill focus decision** — priority chain: weak grammar topic → due vocabulary → recent-topic momentum → fresh-start reading.
+- **Next-chapter pointer** — V1 pgvector retrieval locates the book pages matching the recommended topic.
+- **Readiness** — same transparent V8 formula (weighted_mastery → IELTS band / TOEFL score).
+- **AI narrative** — Gemini writes a short coaching summary on top of the deterministic plan; template fallback if the LLM is down (`summary_source` says which).
+- **First-class agent** — `coordinator → planner → {rag|study|internet|personalize|plan} → memory → evaluation`; invoked proactively via `GET /planner/today`.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/planner/today` | Today's Plan: focus skill, topic, next chapter, due reviews, weak topics, readiness, summary + full reasoning trace |
+
+The **`/plan`** page renders it; the home page leads with a **See Today's Plan** card so a returning user sees their plan first.
+
+### V9 — Production Features
 
 Hardens the app from "working personal project" to production-shaped software.
 
@@ -265,12 +283,9 @@ GitHub Actions CI for lint/test/build.
 
 | Version | Feature | Status |
 |---------|---------|--------|
-| V7 | Long-term memory across sessions | planned |
-| V8 | Analytics dashboard — study time, vocabulary growth, estimated band score | planned |
-| V9 | Production features — auth, logging, monitoring, deployment pipeline | planned |
-| V10 | AI Study Planner — proactive daily planning from weak topics & exam dates | planned |
+| V0–V10 | Core roadmap complete | ✅ shipped |
 
-See [`docs/roadmap.md`](docs/roadmap.md) for the complete plan.
+See [`docs/roadmap.md`](docs/roadmap.md) for the complete plan. Natural next steps from the roadmap's "Future Versions": voice conversations + pronunciation scoring (speaking practice is the last uncovered IELTS skill), a knowledge-graph explorer (expanding V8's co-occurrence view), and RAG evaluation pipelines (the Evaluation Agent is still a stub).
 
 ## Development
 

@@ -22,12 +22,13 @@ from app.agents.nodes import (
     planner_node,
     rag_agent,
     study_agent,
+    study_planner_agent,
 )
 
-_AGENT_ROUTES = ("study", "internet", "personalize", "rag")
+_AGENT_ROUTES = ("study", "internet", "personalize", "plan", "rag")
 
 
-def _route_to_agent(state: dict) -> Literal["study", "internet", "personalize", "rag"]:
+def _route_to_agent(state: dict) -> Literal["study", "internet", "personalize", "plan", "rag"]:
     plan = state.get("plan") or [state.get("intent", "rag")]
     primary = plan[0] if isinstance(plan, list) and plan else "rag"
     return primary if primary in _AGENT_ROUTES else "rag"
@@ -43,6 +44,7 @@ def build_graph() -> Any:
     g.add_node("study", study_agent)
     g.add_node("internet", internet_agent)
     g.add_node("personalize", personalize_agent)
+    g.add_node("plan", study_planner_agent)
     g.add_node("memory", memory_agent)
     g.add_node("evaluation", evaluation_agent)
 
@@ -51,12 +53,19 @@ def build_graph() -> Any:
     g.add_conditional_edges(
         "planner",
         _route_to_agent,
-        {"study": "study", "internet": "internet", "personalize": "personalize", "rag": "rag"},
+        {
+            "study": "study",
+            "internet": "internet",
+            "personalize": "personalize",
+            "plan": "plan",
+            "rag": "rag",
+        },
     )
     g.add_edge("rag", "memory")
     g.add_edge("study", "memory")
     g.add_edge("internet", "memory")
     g.add_edge("personalize", "memory")
+    g.add_edge("plan", "memory")
     g.add_edge("memory", "evaluation")
     g.add_edge("evaluation", END)
 
@@ -76,6 +85,7 @@ async def run_graph(
     personalization: dict | None = None,
     db: object | None = None,
     memory_snapshot: dict | None = None,
+    plan_result: dict | None = None,
 ) -> dict:
     """Invoke the graph with the given request and return the final state.
 
@@ -94,6 +104,7 @@ async def run_graph(
         "personalization": personalization or {},
         "db": db,
         "memory_snapshot": memory_snapshot or {},
+        "plan_result": plan_result or {},
         "facts": facts or [],
         "new_facts": new_facts or [],
         "recalled_facts": [],

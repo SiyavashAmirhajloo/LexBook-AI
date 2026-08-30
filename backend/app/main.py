@@ -9,6 +9,7 @@ from app.api.documents import router as documents_router
 from app.api.health import router as health_router
 from app.api.memory import router as memory_router
 from app.api.personalization import router as personalization_router
+from app.api.planner import router as planner_router
 from app.api.study_sessions import router as study_sessions_router
 from app.core.config import get_settings
 from app.core.errors import install_exception_handlers
@@ -42,6 +43,7 @@ app.include_router(study_sessions_router, prefix=settings.api_prefix, tags=["stu
 app.include_router(personalization_router, prefix=settings.api_prefix, tags=["personalization"])
 app.include_router(memory_router, prefix=settings.api_prefix, tags=["memory"])
 app.include_router(analytics_router, prefix=settings.api_prefix, tags=["analytics"])
+app.include_router(planner_router, prefix=settings.api_prefix, tags=["planner"])
 
 # Install the auth middleware AFTER routers (it sees all paths and lets
 # the allowlist through).

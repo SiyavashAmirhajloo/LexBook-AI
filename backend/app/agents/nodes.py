@@ -35,7 +35,7 @@ async def planner_node(state: dict) -> dict:
     """
     text = state.get("text", "")
     intent = state.get("intent", "chat")
-    if intent in ("study", "internet", "personalize"):
+    if intent in ("study", "internet", "personalize", "plan"):
         plan = [intent]
     else:
         plan = _plan_chat(text)
@@ -115,6 +115,31 @@ async def personalize_agent(state: dict) -> dict:
             "agent": "personalize",
             "grounded": True,
             "sources": sum(counts.values()),
+        }
+    )
+    return state
+
+
+async def study_planner_agent(state: dict) -> dict:
+    """Study Planner Agent (V10 flagship): decides what to study next.
+
+    The deterministic reasoning runs in services/planner.py (this node
+    stays a thin orchestrator like the other agents). Expects state to
+    carry `plan_result` computed by the API layer.
+    """
+    plan = state.get("plan_result") or {}
+    skill = plan.get("focus_skill", "?")
+    topic = plan.get("recommended_topic", "?")
+    reasons = len(plan.get("reasoning", []))
+    state["trace"].append(
+        f"study_planner: skill={skill!r} topic={topic!r} reasoning_steps={reasons}"
+    )
+    state["evaluations"].append(
+        {
+            "agent": "study_planner",
+            # Grounded = the plan has at least one data-driven reason.
+            "grounded": reasons > 0,
+            "sources": len(plan.get("weak_topics", [])) + len(plan.get("due_reviews", [])),
         }
     )
     return state
