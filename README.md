@@ -1,5 +1,8 @@
 # LexBook AI
 
+<img width="1847" height="1028" alt="Screenshot 2026-08-30 183343" src="https://github.com/user-attachments/assets/fccc68d9-bf49-43ec-be2c-f1418728aa16" />
+
+
 An AI-powered personal learning platform that turns static study materials into an
 interactive, agentic learning experience. The first domain is **IELTS/TOEFL
 preparation**, but the architecture is designed so any subject can plug in.
