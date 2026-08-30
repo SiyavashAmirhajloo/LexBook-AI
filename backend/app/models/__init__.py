@@ -1,5 +1,6 @@
 """Models package. Exports ORM classes for Alembic autogenerate."""
 
+from app.models.auth import User, UserSession
 from app.models.conversations import Conversation, Message
 from app.models.documents import Base, Document, DocumentChunk
 from app.models.memory import LongTermFact, Vocabulary
@@ -28,4 +29,6 @@ __all__ = [
     "UserProgress",
     "LongTermFact",
     "Vocabulary",
+    "User",
+    "UserSession",
 ]

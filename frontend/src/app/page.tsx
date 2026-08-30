@@ -2,8 +2,11 @@
 
 import React from 'react';
 import Link from 'next/link';
+import RequireAuth from '@/components/RequireAuth';
+import { useAuth } from '@/lib/auth';
 
-export default function Home() {
+function HomeShell() {
+  const { user, logout } = useAuth();
   const [status, setStatus] = React.useState<string>('Loading...');
 
   React.useEffect(() => {
@@ -15,9 +18,20 @@ export default function Home() {
 
   return (
     <main className="flex min-h-screen flex-col items-center justify-center p-4 bg-gray-900 text-gray-100">
-      <h1 className="text-4xl font-bold mb-2 text-white">
-        LexBook AI
-      </h1>
+      <div className="absolute top-4 right-4 flex items-center gap-3">
+        <div className="text-right">
+          <p className="text-sm text-white">{user?.name || 'Guest'}</p>
+          <p className="text-[10px] text-gray-500">{user?.provider} · {user?.email}</p>
+        </div>
+        <button
+          onClick={logout}
+          className="text-xs bg-gray-800 hover:bg-gray-700 border border-gray-700 text-gray-300 px-3 py-1.5 rounded"
+        >
+          Log out
+        </button>
+      </div>
+
+      <h1 className="text-4xl font-bold mb-2 text-white">LexBook AI</h1>
       <p className="text-gray-400 mb-6 text-sm">
         AI-Powered Personal Agentic Learning Platform
       </p>
@@ -73,5 +87,13 @@ export default function Home() {
         </Link>
       </div>
     </main>
+  );
+}
+
+export default function Home() {
+  return (
+    <RequireAuth>
+      <HomeShell />
+    </RequireAuth>
   );
 }
