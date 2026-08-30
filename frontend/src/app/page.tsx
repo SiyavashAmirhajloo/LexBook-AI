@@ -44,6 +44,14 @@ function HomeShell() {
           </p>
         </div>
 
+        {/* V10: Today's Plan — first thing a returning user sees */}
+        <Link
+          href="/plan"
+          className="block w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-500 hover:to-purple-500 text-white font-semibold py-3 px-4 rounded text-sm transition-colors shadow-lg shadow-blue-900/30"
+        >
+          🗓️ See Today&apos;s Plan →
+        </Link>
+
         <Link
           href="/library"
           className="inline-block w-full bg-blue-600 hover:bg-blue-500 text-white font-medium py-2 px-4 rounded text-sm transition-colors"
