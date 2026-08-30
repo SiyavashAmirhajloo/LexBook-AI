@@ -7,7 +7,9 @@ backend/.mypy_cache
 backend/.coverage
 backend/htmlcov/
 backend/*.egg-info/
-backend/__pycache__/
+__pycache__/
+*.pyc
+*.tsbuildinfo
 backend/alembic/versions/*.pyc
 
 # Frontend
