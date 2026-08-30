@@ -64,6 +64,13 @@ export default function Home() {
         >
           🧠 View Memory →
         </Link>
+
+        <Link
+          href="/dashboard"
+          className="inline-block w-full bg-cyan-600 hover:bg-cyan-500 text-white font-medium py-2 px-4 rounded text-sm transition-colors"
+        >
+          📈 Analytics Dashboard →
+        </Link>
       </div>
     </main>
   );
