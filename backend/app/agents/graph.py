@@ -74,6 +74,8 @@ async def run_graph(
     topics: list[str] | None = None,
     resources: list[dict] | None = None,
     personalization: dict | None = None,
+    db: object | None = None,
+    memory_snapshot: dict | None = None,
 ) -> dict:
     """Invoke the graph with the given request and return the final state.
 
@@ -90,6 +92,8 @@ async def run_graph(
         "topics": topics or [],
         "resources": resources or [],
         "personalization": personalization or {},
+        "db": db,
+        "memory_snapshot": memory_snapshot or {},
         "facts": facts or [],
         "new_facts": new_facts or [],
         "recalled_facts": [],

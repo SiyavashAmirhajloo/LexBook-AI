@@ -60,19 +60,27 @@ async def chat_stream(
         db, req.message, document_id=None, top_k=6
     )
 
+    # ── Pull a memory snapshot so the graph can write back to it ──
+    from app.services.memory import memory_snapshot
+    snapshot = await memory_snapshot(db)
+
     # ── Run the agent graph (coordinator → planner → RAG → memory → eval)
     graph_state = await run_graph(
         text=req.message,
         intent="chat",
         context_block=context_block,
         citations=citations,
+        db=db,
+        memory_snapshot=snapshot,
     )
     print(f"[graph] intent=chat traced={len(graph_state['trace'])} route={graph_state['route']}")
     for line in graph_state["trace"]:
         print(f"[graph]   {line}")
 
-    # ── Build prompts ───────────────────────────────────────────
-    user_prompt = build_user_prompt(req.message, context_block)
+    # ── Build prompts (with memory context) ─────────────────────
+    from app.services.memory import format_snapshot_for_prompt
+    memory_block = format_snapshot_for_prompt(graph_state.get("memory_snapshot") or snapshot)
+    user_prompt = build_user_prompt(req.message, context_block, memory_block=memory_block)
     messages = [LLMMessage(role="user", content=user_prompt)]
 
     # ── Resolve / create conversation ───────────────────────────

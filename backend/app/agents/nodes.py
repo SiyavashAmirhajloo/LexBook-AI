@@ -121,20 +121,45 @@ async def personalize_agent(state: dict) -> dict:
 
 
 async def memory_agent(state: dict) -> dict:
-    """Memory Agent (stub): recalls facts that were remembered earlier.
+    """Memory Agent: real long-term memory read+write (V7).
 
-    Full long-term memory arrives in V7; for now we round-trip a small
-    per-request fact cache through the graph state.
+    Reads a memory snapshot from the DB (if one was provided in state by the
+    API layer) and writes back any new facts / vocabulary the LLM extracted
+    from the user's current message. The agent stays a thin orchestrator —
+    the heavy work lives in services/memory.py so this can be unit-tested
+    with an in-memory database later.
     """
-    facts = state.get("facts", [])
-    recalled = state.get("recalled_facts", [])
-    new_facts = state.get("new_facts", [])
-    state["recalled_facts"] = recalled + new_facts
-    state["facts"] = facts + new_facts
-    total = len(state["facts"])
-    state["trace"].append(
-        f"memory_agent: new={len(new_facts)} recalled={len(recalled)} total={total}"
+    db = state.get("db")
+    snapshot = state.get("memory_snapshot") or {}
+    trace = state.get("trace", [])
+
+    if db is not None:
+        from app.services.memory import add_fact, extract_memories, learn_word
+
+        # WRITE: extract facts + vocabulary from the current text and persist.
+        text = state.get("text", "")
+        extracted = await extract_memories(text)
+        for f in extracted.get("facts", []):
+            await add_fact(
+                db, f.get("text", ""), category=f.get("category", "fact"), source="chat"
+            )
+        for v in extracted.get("vocabulary", []):
+            await learn_word(
+                db, v.get("word", ""), topic=v.get("topic", "general")
+            )
+
+        # READ: refresh the snapshot so downstream agents/UI see the latest.
+        from app.services.memory import memory_snapshot as _snapshot
+        snapshot = await _snapshot(db)
+        state["memory_snapshot"] = snapshot
+
+    facts_n = len(snapshot.get("facts", []))
+    vocab_n = len(snapshot.get("vocabulary", []))
+    weak_n = len(snapshot.get("weak_topics", []))
+    trace.append(
+        f"memory_agent: facts={facts_n} vocab={vocab_n} weak_topics={weak_n}"
     )
+    state["trace"] = trace
     return state
 
 

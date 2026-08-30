@@ -21,7 +21,12 @@ Study Sessions ──► Topic/Keyword Extraction ──────────
         └──────────► Internet Intelligence      {rag | study | internet |
                  (curated web resources,         personalize} → memory →
                   original AI summaries +        evaluation
-                  generated questions)
+                  generated questions)                ▲
+                                          ┌───────────┘
+                                          │ all 6 memory types
+                                          │ (facts, vocab, sessions,
+                                          │  progress, weakness,
+                                          │  conversations)
 ```
 
 **Stack:** FastAPI (async) · PostgreSQL + pgvector · LangGraph · Gemini ·
@@ -48,16 +53,43 @@ supported configuration (`EMBEDDING_PROVIDER`, `SEARCH_PROVIDER`,
 ## Feature Walkthrough
 
 1. **Upload books** in `/library` — text is extracted, chunked, embedded into pgvector.
-2. **Chat with your books** in `/chat` — streaming answers with clickable page-level citations.
+2. **Chat with your books** in `/chat` — streaming answers with clickable page-level citations; the LLM also sees what you studied and struggled with previously.
 3. **Log a study session** in `/study-sessions` — say *"I finished Unit 7"*; the system resolves the book section and extracts topics/keywords.
 4. **Find web resources** on any session card — curated IELTS/TOEFL links ranked by source reputation, each with an original AI-written summary and generated practice questions.
 5. **Practice** via *Practice This Session* → flashcards, quizzes (with mastery tracking), and speaking/writing prompts. Then check `/review` for your weakest topics and what to study next.
+6. **Long-term memory** in `/memory` — facts the app remembers, vocabulary tracked, weak topics inherited across sessions.
 
 ---
 
 ## Version History
 
-### V6 — Personalized Learning *(current)*
+### V7 — Long-Term Memory *(current)*
+
+The app stops forgetting between sessions. Six memory types per `docs/architecture.md`, all stored in PostgreSQL — structured tables where lookup matters, no pgvector overhead for list-style data.
+
+- **Long-term memory** — `long_term_facts` (preference / goal / fact) — durable user statements, auto-extracted from chat via the LLM, plus manual entry.
+- **Conversation memory** — V2 `conversations` + `messages` (read-only here).
+- **Learning memory** — V3 `study_sessions` (topics, keywords, summary, raw_input).
+- **Study progress** — V6 `user_progress` (per-topic mastery, attempts, correct).
+- **Weakness memory** — derived view of `user_progress` (mastery ≤ 50% with ≥ 1 attempt). Feeds the recommendation endpoint cross-session.
+- **Vocabulary memory** — `vocabulary` table (word, topic, status, seen_count).
+
+**Memory Agent** is no longer a stub — it reads a snapshot from the DB, runs LLM extraction on the user's current text, writes new facts + vocabulary, and pushes a fresh snapshot into graph state. RAG prompts now include a `What the learner already knows` block so answers draw on prior sessions, not just the current one.
+
+**Cross-session example (real, end-to-end):**
+1. Session A: quiz wrong on "Sentence Connectors" → `user_progress` updated, 0% mastery.
+2. Session B: hit `/recommendation` → *"Focus on 'Sentence Connectors' next — current mastery 0% (0/1 correct)"* — driven by the prior session's data.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/memory/snapshot` | Full memory snapshot (facts, vocab, weak topics, recent sessions) |
+| `GET` | `/api/v1/memory/summary` | Compact form for prompt injection |
+| `GET/POST` | `/api/v1/memory/facts` | List or add a long-term fact |
+| `GET/POST` | `/api/v1/memory/vocabulary` | List or add a tracked word |
+
+The **`/memory`** page in the UI shows everything the app remembers about you.
+
+### V6 — Personalized Learning
 
 The app stops just retrieving and starts teaching.
 
