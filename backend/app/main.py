@@ -1,6 +1,7 @@
 """FastAPI application factory."""
 from fastapi import FastAPI
 
+from app.api.analytics import router as analytics_router
 from app.api.chat import router as chat_router
 from app.api.documents import router as documents_router
 from app.api.health import router as health_router
@@ -20,6 +21,7 @@ app.include_router(chat_router, prefix=settings.api_prefix, tags=["chat"])
 app.include_router(study_sessions_router, prefix=settings.api_prefix, tags=["study-sessions"])
 app.include_router(personalization_router, prefix=settings.api_prefix, tags=["personalization"])
 app.include_router(memory_router, prefix=settings.api_prefix, tags=["memory"])
+app.include_router(analytics_router, prefix=settings.api_prefix, tags=["analytics"])
 
 # Root endpoint
 @app.get("/")

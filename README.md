@@ -58,12 +58,33 @@ supported configuration (`EMBEDDING_PROVIDER`, `SEARCH_PROVIDER`,
 4. **Find web resources** on any session card — curated IELTS/TOEFL links ranked by source reputation, each with an original AI-written summary and generated practice questions.
 5. **Practice** via *Practice This Session* → flashcards, quizzes (with mastery tracking), and speaking/writing prompts. Then check `/review` for your weakest topics and what to study next.
 6. **Long-term memory** in `/memory` — facts the app remembers, vocabulary tracked, weak topics inherited across sessions.
+7. **Dashboard** in `/dashboard` — transparent estimated scores, study-time + vocab-growth curves, knowledge graph, mistake bars, session timeline.
 
 ---
 
 ## Version History
 
-### V7 — Long-Term Memory *(current)*
+### V8 — Analytics Dashboard *(current)*
+
+Read-only dashboard that visualizes every metric the app already tracks (V2–V7). No parallel tracking system.
+
+- **KPI tiles** — books, pages, sessions, vocab, facts, with sparkline on the vocabulary growth.
+- **Estimated IELTS band + TOEFL score** — the formula and the exact inputs are returned alongside each estimate, so the prediction is auditable not black-box.
+  - `weighted_mastery = 0.5*quiz_mastery + 0.3*coverage + 0.2*completion`
+  - `ielts_band = 4.5 + 4.0*weighted_mastery`, rounded to nearest 0.5
+  - `toefl_score = 30 + 90*weighted_mastery`
+- **Charts (inline SVG, zero new dependencies)** — study time over time, vocabulary growth (running total), learning curve (daily quiz accuracy), grammar-topics mastery bar, mistakes bar.
+- **Knowledge graph** — topics as nodes sized by study frequency, edges weighted by co-occurrence within sessions. Circular deterministic layout.
+- **Timeline** — recent study sessions, newest first.
+- **Scoring-method panel** — the exact formula printed in the dashboard, no hidden knobs.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/api/v1/analytics` | One snapshot with everything: totals, all chart series, the knowledge graph, the timeline, and the transparent estimates |
+
+The **`/dashboard`** page renders it all.
+
+### V7 — Long-Term Memory
 
 The app stops forgetting between sessions. Six memory types per `docs/architecture.md`, all stored in PostgreSQL — structured tables where lookup matters, no pgvector overhead for list-style data.
 
